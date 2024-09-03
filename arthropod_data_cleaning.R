@@ -10,8 +10,13 @@ arth_raw_dat=read.table("G:\\My Drive\\SLU\\project\\GEM-datasets\\Arthropod eme
 arth_raw_dat1=arth_raw_dat%>%
   mutate(year=year(Date), month=month(Date), dia=day(Date))%>%
   mutate(across(18:25, as.integer))%>%
-  mutate(across(18:25, ~na_if(.,-9999)))%>%
-  mutate(across(18:25))%>%
+  mutate(across(18:25, ~na_if(.,-9999)))
+
+remov_dat=which(arth_raw_dat[,18:25]<0)
+
+arth_raw_dat1=arth_raw_dat1[-remov_dat,]
+
+arth_raw_dat1=arth_raw_dat1%>%
   mutate(TotalSpecimens=rowSums(.[18:25]))%>%
   select(-(5:12))%>%
   mutate(date=as.Date(paste(year, month, dia), "%Y %m %d"), DOY=yday(date))
@@ -48,8 +53,9 @@ arth_dat5=arth_dat4[which(arth_dat4$Family==c("Ichneumonidae", "Nymphalidae") &
                                 arth_dat4$TotalSpecimens< lim3 &
                                 arth_dat4$year>2006),]
 
-#Exclude bombus if still in data and 2020?
-arth_raw_dat5=anti_join(arth_dat4,arth_dat5)%>%filter(!Genus=="Bombus", !year==2020)
+#Exclude bombus if still in data and 2020? and an unidentified family
+arth_raw_dat5=anti_join(arth_dat4,arth_dat5)%>%filter(!Genus=="Bombus", !year==2020,
+                                                      !Family=="unidentified")
 
 #exclude mites for 1996 because cups were not calculated separately
 arth_dat6=arth_raw_dat5[which(arth_raw_dat5$Order=="Acari" &
@@ -61,6 +67,5 @@ arth_raw_dat6=anti_join(arth_raw_dat5,arth_dat6)
 library(ggplot2)
 
 ggplot(data=arth_raw_dat6, aes(x=DOY, y=TotalSpecimens, col=Family))+
-  geom_line()+facet_wrap(~Order)+theme_classic()
+  geom_point()+facet_wrap(~Order)+theme_classic()
 
-str(arth_raw_dat6)
