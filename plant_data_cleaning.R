@@ -10,7 +10,7 @@ cas_dat=read.csv("G:\\My Drive\\SLU\\project\\ZackPhen\\data\\raw\\Cassiope phen
 #str(cas_dat)
 
 cas_dat$Date=as.POSIXct(cas_dat$Date, tz="GMT", format = "%Y-%m-%d")
-#move before 1997 because totals were across all sections
+#remove before 1997 because totals were across all sections
 cas_dat_raw=cas_dat%>%
   mutate(year=year(Date), month=month(Date), dia=day(Date), species="Cassiope")%>%
   mutate(DOY=yday(Date))%>%
@@ -24,7 +24,7 @@ dry_dat=read.csv("G:\\My Drive\\SLU\\project\\ZackPhen\\data\\raw\\Dryas phenolo
 #str(cas_dat)
 
 dry_dat$Date=as.POSIXct(dry_dat$Date, tz="GMT", format = "%Y-%m-%d")
-#move before 1997 because totals were across all sections
+#remove before 1997 because totals were across all sections
 dry_dat_raw=dry_dat%>%
   mutate(year=year(Date), month=month(Date), dia=day(Date), species="Dryas")%>%
   mutate(DOY=yday(Date))%>%
