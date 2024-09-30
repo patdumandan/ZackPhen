@@ -14,7 +14,6 @@ cas_dat$Date=as.POSIXct(cas_dat$Date, tz="GMT", format = "%Y-%m-%d")
 cas_dat_raw=cas_dat%>%
   mutate(year=year(Date), month=month(Date), dia=day(Date), species="Cassiope")%>%
   mutate(DOY=yday(Date))%>%
- filter(!year<1997)%>%
   select(-Buds, -Field_remarks, -General_remarks, -Date)
 
 ###dryas
@@ -28,7 +27,6 @@ dry_dat$Date=as.POSIXct(dry_dat$Date, tz="GMT", format = "%Y-%m-%d")
 dry_dat_raw=dry_dat%>%
   mutate(year=year(Date), month=month(Date), dia=day(Date), species="Dryas")%>%
   mutate(DOY=yday(Date))%>%
-  filter(!year<1997)%>%
   select(-Buds, -Field_remarks, -General_remarks, -Date)
 
 ###Papaver
@@ -40,7 +38,6 @@ pap_dat$Date=as.POSIXct(pap_dat$Date, tz="GMT", format = "%Y-%m-%d")
 pap_dat_raw=pap_dat%>%
   mutate(year=year(Date), month=month(Date), dia=day(Date), species="Papaver")%>%
   mutate(DOY=yday(Date))%>%
-  filter(!year<1997)%>%
   select(-Buds, -Field_remarks, -General_remarks, -Date)
 
 ###Salix
@@ -51,9 +48,8 @@ sal_dat$Date=as.POSIXct(sal_dat$Date, tz="GMT", format = "%Y-%m-%d")
 #move before 1997 because totals were across all sections
 sal_dat_raw=sal_dat%>%
   mutate(year=year(Date), month=month(Date), dia=day(Date), species="Salix")%>%
-  mutate(DOY=yday(Date))%>%
-  filter(!year<1997)%>%
-  select(-Buds, -Field_remarks, -General_remarks, -Date)
+  mutate(DOY=yday(Date))%>%rename(Flowers=Female_flowers)%>%
+  select(-Buds, -Field_remarks, -General_remarks, -Date, -Male_flowers)
 
 ###Saxifraga
 sax_dat=read.csv("G:\\My Drive\\SLU\\project\\ZackPhen\\data\\raw\\Saxifraga phenology_10.17897_YXH1-ZB25_data.txt",
@@ -64,7 +60,6 @@ sax_dat$Date=as.POSIXct(sax_dat$Date, tz="GMT", format = "%Y-%m-%d")
 sax_dat_raw=sax_dat%>%
   mutate(year=year(Date), month=month(Date), dia=day(Date), species="Saxifraga")%>%
   mutate(DOY=yday(Date))%>%
-  filter(!year<1997)%>%
   select(-Buds, -General_remarks, -Date)
 
 ###Silene
@@ -76,7 +71,6 @@ sil_dat$Date=as.POSIXct(sil_dat$Date, tz="GMT", format = "%Y-%m-%d")
 sil_dat_raw=sil_dat%>%
   mutate(year=year(Date), month=month(Date), dia=day(Date), species="Silene")%>%
   mutate(DOY=yday(Date))%>%
-  filter(!year<1997)%>%
   select(-Buds,  -Date)
 
 
