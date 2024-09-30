@@ -80,7 +80,7 @@ sil_dat_raw=sil_dat%>%
   select(-Buds,  -Date)
 
 
-plant_dat=vec_rbind(sil_dat_raw, sax_dat_raw, sal_dat_raw, pap_dat_raw, dry_dat_raw, cas_dat_raw)%>%
+plant_dat=vec_rbind(ssil_dat_raw, sax_dat_raw, sal_dat_raw, pap_dat_raw, dry_dat_raw, cas_dat_raw)%>%
   select(Plot, Section, Flowers, year, month, dia, DOY, species)%>%
   rename(group=species)
 

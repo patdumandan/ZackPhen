@@ -79,13 +79,14 @@ reconstruct(wv2_com, "doy")
 
 #plant data
 
-plant_dat=read.csv("G:\\My Drive\\SLU\\project\\ZackPhen\\data\\ZAC_plant_raw.csv")
+plant_dat=read.csv("I:\\My Drive\\SLU\\phenology-project\\ZackPhen\\data\\ZAC_plant_raw.csv")
 
 plant_grp=plant_dat%>%
   group_by(year, group, DOY)%>%
   mutate(wk_tot=sum(Flowers, na.rm=T))%>%
   group_by(group, year)%>%
-  mutate(yr_tot=sum(Flowers, na.rm=T))
+  mutate(yr_tot=sum(Flowers, na.rm=T))%>%
+  filter(!year<1996)
 
 #plant 10
 plant_prop10=plant_grp%>%
@@ -108,14 +109,6 @@ plant_prop10=plant_grp%>%
          PD_10=if_else(cum_pt>=0.1,"1", "0"))%>%
   filter(PD_10==1)%>%slice_head(n=1)%>%
   select(group, year, DOY, cum_pt, cum_tot)
-
-# sal_prop10=plant_grp%>%filter(group=="Salix")%>%
-#   group_by(year)%>%
-#   mutate(cum_tot=cumsum(Flowers),
-#          cum_pt=cum_tot/sum(Flowers),
-#          PD_10=if_else(cum_pt>=0.1,"1", "0"))%>%
-#   filter(PD_10==1)%>%slice_head(n=1)%>%
-#   select(group, year, DOY, cum_pt, cum_tot)
 
 ggplot(plant_prop10)+geom_line(aes(x=year,y=DOY))+facet_wrap(~group)+
   theme_classic()+
@@ -128,12 +121,12 @@ wt.image(sax_com10, color.key = "quantile",main="Saxifraga", n.levels = 250,  le
 wt.avg(sax_com10)
 reconstruct(sax_com10, "DOY")
 
-#salix???
+#salix
 sal10=plant_prop10%>%filter(group=="Salix")
-sax_com10=analyze.wavelet(sax10, "DOY", make.pval = TRUE, n.sim = 10)
-wt.image(sax_com10, color.key = "quantile",main="Saxifraga", n.levels = 250,  legend.params = list(lab = "wavelet power levels", mar = 4.7))
-wt.avg(sax_com10)
-reconstruct(sax_com10, "DOY")
+sal_com10=analyze.wavelet(sal10, "DOY", make.pval = TRUE, n.sim = 10)
+wt.image(sal_com10, color.key = "quantile",main="Salix", n.levels = 250,  legend.params = list(lab = "wavelet power levels", mar = 4.7))
+wt.avg(sal_com10)
+reconstruct(sal_com10, "DOY")
 
 #dryas
 dry10=plant_prop10%>%filter(group=="Dryas")
@@ -218,3 +211,57 @@ pap_com50=analyze.wavelet(pap50, "DOY", make.pval = TRUE, n.sim = 10)
 wt.image(pap_com50, color.key = "quantile",main="Papaver", n.levels = 250,  legend.params = list(lab = "wavelet power levels", mar = 4.7))
 wt.avg(cas_com50)
 reconstruct(cas_com50, "DOY")
+
+#plant 90
+plant_prop90=plant_grp%>%
+  group_by(year, group)%>%
+  mutate(cum_tot=cumsum(Flowers),
+         cum_pt=cum_tot/sum(Flowers),
+         PD_90=if_else(cum_pt>=0.9,"1", "0"))%>%
+  filter(PD_90==1)%>%slice_head(n=1)%>%
+  select(group, year, DOY, cum_pt, cum_tot)
+
+par(mfrow=c(2,3))
+
+#saxifraga
+sax90=plant_prop90%>%filter(group=="Saxifraga")
+sax_com90=analyze.wavelet(sax90, "DOY", make.pval = TRUE, n.sim = 10)
+wt.image(sax_com90, color.key = "quantile",main="Saxifraga", n.levels = 250,  legend.params = list(lab = "wavelet power levels", mar = 4.7))
+wt.avg(sax_com90)
+reconstruct(sax_com90, "DOY")
+
+#saliX
+sal90=plant_prop90%>%filter(group=="Salix")
+sal_com90=analyze.wavelet(sal90, "DOY", make.pval = TRUE, n.sim = 10)
+wt.image(sal_com90, color.key = "quantile",main="Salix", n.levels = 250,  legend.params = list(lab = "wavelet power levels", mar = 4.7))
+wt.avg(sal_com90)
+reconstruct(sal_com90, "DOY")
+
+#dryas
+dry90=plant_prop90%>%filter(group=="Dryas")
+dry_com90=analyze.wavelet(dry90, "DOY", make.pval = TRUE, n.sim = 10)
+wt.image(dry_com90, color.key = "quantile", n.levels = 250,main="Dryas",  legend.params = list(lab = "wavelet power levels", mar = 4.7))
+wt.avg(dry_com90)
+reconstruct(dry_com90, "DOY")
+
+#cassiope
+
+cas90=plant_prop90%>%filter(group=="Cassiope")
+cas_com90=analyze.wavelet(cas90, "DOY", make.pval = TRUE, n.sim = 10)
+wt.image(cas_com90, color.key = "quantile",main="Cassiope", n.levels = 250,  legend.params = list(lab = "wavelet power levels", mar = 4.7))
+wt.avg(cas_com90)
+reconstruct(cas_com90, "DOY")
+
+#Silene
+sil90=plant_prop90%>%filter(group=="Silene")
+sil_com90=analyze.wavelet(sil90, "DOY", make.pval = TRUE, n.sim = 10)
+wt.image(sil_com90, color.key = "quantile",main="Silene", n.levels = 250,  legend.params = list(lab = "wavelet power levels", mar = 4.7))
+wt.avg(cas_com90)
+reconstruct(cas_com90, "DOY")
+
+#Papaver
+pap90=plant_prop90%>%filter(group=="Papaver")
+pap_com90=analyze.wavelet(pap90, "DOY", make.pval = TRUE, n.sim = 10)
+wt.image(pap_com90, color.key = "quantile",main="Papaver", n.levels = 250,  legend.params = list(lab = "wavelet power levels", mar = 4.7))
+wt.avg(cas_com90)
+reconstruct(cas_com90, "DOY")
