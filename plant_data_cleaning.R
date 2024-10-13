@@ -246,14 +246,3 @@ plant_timing=plant_timing%>%filter(Plot%in%target_plots)
 
 plant_timings=plant_timing%>%
   pivot_longer(cols=c(DOY_10_flowering:DOY_90_flowering), names_to="period")
-<<<<<<< HEAD
-=======
-
-
-require(WaveletComp)
-
-pap90=plant_timings%>%filter(Species=="Papaver", period=="DOY_90_flowering")%>%
-  group_by(Year)%>%summarise(ave_doy90=mean(value))
-
-pap_com90=analyze.wavelet(pap90, "ave_doy90", make.pval = TRUE, n.sim = 10)
->>>>>>> 36b840e04759b716730c57f0bf9ebb4f55559a22

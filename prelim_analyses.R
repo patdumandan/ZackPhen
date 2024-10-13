@@ -2,28 +2,91 @@
 arth_raw_dat=read.csv("G:\\My Drive\\SLU\\project\\ZackPhen\\data\\arth_dat_clean.csv")
 require(dplyr)
 require(ggplot2)
+require(tidyr)
 require(WaveletComp)
 
 arth_dat_clean=read.csv("G:\\My Drive\\SLU\\project\\ZackPhen\\data\\arth_dat_clean.csv")
+arth_dat_clean=arth_dat_clean%>%filter(!Order%in%c("sp.", "unidentified"))
+
+#all pooled
+arth_dat_grp=arth_dat_clean%>%
+  group_by(year, Order, doy)%>%
+  mutate(wk_tot=sum(Total_Art, na.rm=T))%>%
+  group_by(Order, year)%>%
+  mutate(yr_tot=sum(Total_Art, na.rm=T))%>%
+  filter(!year<1996)
+
+arth_dat_prop10=arth_dat_grp%>%
+  group_by(year, Order)%>%
+  mutate(cum_tot=cumsum(Total_Art),
+         cum_pt=cum_tot/sum(Total_Art),
+         PD_10=if_else(cum_pt>=0.1,"1", "0"))%>%
+  filter(PD_10==1)%>%slice_head(n=1)%>%
+  select(Plot.ID, year, doy, cum_pt, cum_tot, Order)
+
+arth_dat_prop50=arth_dat_grp%>%
+  group_by(year, Order)%>%
+  mutate(cum_tot=cumsum(Total_Art),
+         cum_pt=cum_tot/sum(Total_Art),
+         PD_50=if_else(cum_pt>=0.5,"1", "0"))%>%
+  filter(PD_50==1)%>%slice_head(n=1)%>%
+  select(Plot.ID, year, doy, cum_pt, cum_tot, Order)
+
+arth_dat_prop90=arth_dat_grp%>%
+  group_by(year, Order)%>%
+  mutate(cum_tot=cumsum(Total_Art),
+         cum_pt=cum_tot/sum(Total_Art),
+         PD_90=if_else(cum_pt>=0.9,"1", "0"))%>%
+  filter(PD_90==1)%>%slice_head(n=1)%>%
+  select(Plot.ID, year, doy, cum_pt, cum_tot, Order)
+
+par(mfrow=c(3,1))
+ggplot(arth_dat_prop10, aes(x=year,y=doy))+geom_line(aes(x=year,y=doy, col=Order))+
+  theme_classic()+geom_smooth(method="gam")+
+  ylab("day of year")+xlab("year")+ggtitle("onset")
+
+ggplot(arth_dat_prop50, aes(x=year,y=doy))+geom_line(aes(x=year,y=doy, col=Order))+
+  theme_classic()+geom_smooth(method="gam")+
+  ylab("day of year")+xlab("year")+ggtitle("mid-season")
+
+ggplot(arth_dat_prop90, aes(x=year,y=doy))+geom_line(aes(x=year,y=doy, col=Order))+
+  theme_classic()+geom_smooth(method="gam")+
+  ylab("day of year")+xlab("year")+ggtitle("end")
+
+#by environment
 mesic_dat=arth_dat_clean%>%filter(Plot.ID%in%c("Art3", "Art4"))
 arid_dat=arth_dat_clean%>%filter(Plot.ID%in%c("Art5", "Art7"))
 
 #start
-mesic_dat_prop10=mesic_dat%>%select(-1)%>%
-  group_by(year)%>%
-  mutate(cum_tot=cumsum(Total_Art),
-         cum_pt=cum_tot/sum(Total_Art),
-         PD_10=if_else(cum_pt>=0.1,"1", "0"))%>%
-  filter(PD_10==1)%>%slice_head(n=1)%>%
-  select(Plot.ID, year, doy, cum_pt, cum_tot)
+mesic_dat_grp=mesic_dat%>%filter(!Genus%in%c("sp.", "unidentified"))%>%
+  group_by(year, Genus, doy)%>%
+  mutate(wk_tot=sum(Total_Art, na.rm=T))%>%
+  group_by(Genus, year)%>%
+  mutate(yr_tot=sum(Total_Art, na.rm=T))%>%
+  filter(!year<1996)
 
-arid_dat_prop10=arid_dat%>%select(-1)%>%
+arid_dat_grp=mesic_dat%>%filter(!Genus%in%c("sp.", "unidentified"))%>%
+  group_by(year, Genus, doy)%>%
+  mutate(wk_tot=sum(Total_Art, na.rm=T))%>%
+  group_by(Genus, year)%>%
+  mutate(yr_tot=sum(Total_Art, na.rm=T))%>%
+  filter(!year<1996)
+
+mesic_dat_prop10=mesic_dat_grp%>%
   group_by(year)%>%
   mutate(cum_tot=cumsum(Total_Art),
          cum_pt=cum_tot/sum(Total_Art),
          PD_10=if_else(cum_pt>=0.1,"1", "0"))%>%
   filter(PD_10==1)%>%slice_head(n=1)%>%
-  select(Plot.ID, year, doy, cum_pt, cum_tot)
+  select(Plot.ID, year, doy, cum_pt, cum_tot, Genus)
+
+arid_dat_prop10=arid_dat_grp%>%
+  group_by(year)%>%
+  mutate(cum_tot=cumsum(Total_Art),
+         cum_pt=cum_tot/sum(Total_Art),
+         PD_10=if_else(cum_pt>=0.1,"1", "0"))%>%
+  filter(PD_10==1)%>%slice_head(n=1)%>%
+  select(Plot.ID, year, doy, cum_pt, cum_tot, Genus)
 
 #mean timing
 mesic_dat_prop50=mesic_dat%>%select(-1)%>%
@@ -59,9 +122,9 @@ arid_dat_prop90=arid_dat%>%select(-1)%>%
   filter(PD_90==1)%>%slice_head(n=1)%>%
   select(Plot.ID, year, doy, cum_pt, cum_tot)
 
-ggplot(mesic_dat_prop10)+geom_line(aes(x=year,y=doy))+
+ggplot(mesic_dat_prop10)+geom_line(aes(x=year,y=doy, col=Genus))+
   theme_classic()+
-  ylab("mean timing")+xlab("day of year")+ggtitle("mesic heath")
+  ylab("onset")+xlab("day of year")+ggtitle("mesic heath")
 
 ggplot(arid_dat_prop10)+geom_line(aes(x=year,y=doy))+
   theme_classic()+
@@ -97,10 +160,6 @@ plant_prop10=plant_grp%>%
   filter(PD_10==1)%>%slice_head(n=1)%>%
   select(group, year, DOY, cum_pt, cum_tot)
 
-ggplot(plant_prop10)+geom_line(aes(x=year,y=DOY))+facet_wrap(~group)+
-  theme_classic()+
-  ylab("day of year")+xlab("year")+ggtitle("flowering onset")
-
 #plant 10
 plant_prop10=plant_grp%>%
   group_by(year, group)%>%
@@ -110,158 +169,269 @@ plant_prop10=plant_grp%>%
   filter(PD_10==1)%>%slice_head(n=1)%>%
   select(group, year, DOY, cum_pt, cum_tot)
 
-ggplot(plant_prop10)+geom_line(aes(x=year,y=DOY))+facet_wrap(~group)+
-  theme_classic()+
+ggplot(plant_prop10, aes(x=year,y=DOY))+geom_line(aes(x=year,y=DOY, col=group))+
+  theme_classic()+geom_smooth(method="gam")+
   ylab("day of year")+xlab("year")+ggtitle("flowering onset")
 
-#saxifraga
-sax10=plant_prop10%>%filter(group=="Saxifraga")
-sax_com10=analyze.wavelet(sax10, "DOY", make.pval = TRUE, n.sim = 10)
-wt.image(sax_com10, color.key = "quantile",main="Saxifraga", n.levels = 250,  legend.params = list(lab = "wavelet power levels", mar = 4.7))
-wt.avg(sax_com10)
-reconstruct(sax_com10, "DOY")
+ggplot(plant_prop50, aes(x=year,y=DOY))+geom_line(aes(x=year,y=DOY, col=group))+
+  theme_classic()+geom_smooth(method="gam")+
+  ylab("day of year")+xlab("year")+ggtitle("flowering peak")
 
-#salix
-sal10=plant_prop10%>%filter(group=="Salix")
-sal_com10=analyze.wavelet(sal10, "DOY", make.pval = TRUE, n.sim = 10)
-wt.image(sal_com10, color.key = "quantile",main="Salix", n.levels = 250,  legend.params = list(lab = "wavelet power levels", mar = 4.7))
-wt.avg(sal_com10)
-reconstruct(sal_com10, "DOY")
+ggplot(plant_prop90, aes(x=year,y=DOY))+geom_line(aes(x=year,y=DOY, col=group))+
+  theme_classic()+geom_smooth(method="gam")+
+  ylab("day of year")+xlab("year")+ggtitle("flowering end")
 
-#dryas
-dry10=plant_prop10%>%filter(group=="Dryas")
-dry_com10=analyze.wavelet(dry10, "DOY", make.pval = TRUE, n.sim = 10)
-wt.image(dry_com10, color.key = "quantile", n.levels = 250,main="Dryas",  legend.params = list(lab = "wavelet power levels", mar = 4.7))
-wt.avg(dry_com10)
-reconstruct(dry_com10, "DOY")
 
-#cassiope
+#plant data####
+phne_dat=Phenology_Plants_Zackenberg_1996_2020%>%group_by(Species, Year)%>%
+  summarise(mean_doy=mean(DOY_50_flowering))
 
-cas10=plant_prop10%>%filter(group=="Cassiope")
-cas_com10=analyze.wavelet(cas10, "DOY", make.pval = TRUE, n.sim = 10)
-wt.image(cas_com10, color.key = "quantile",main="Cassiope", n.levels = 250,  legend.params = list(lab = "wavelet power levels", mar = 4.7))
-wt.avg(cas_com10)
-reconstruct(cas_com10, "DOY")
+phne_dat2=read.csv("I:\\My Drive\\SLU\\phenology-project\\ZackPhen\\ZAC_plant_phenology_1996-2023.csv")%>%
+  group_by(Species, Year)%>%summarise(mean_doy=mean(DOY_50_flowering))
 
-#Silene
-sil10=plant_prop10%>%filter(group=="Silene")
-sil_com10=analyze.wavelet(sil10, "DOY", make.pval = TRUE, n.sim = 10)
-wt.image(sil_com10, color.key = "quantile",main="Silene", n.levels = 250,  legend.params = list(lab = "wavelet power levels", mar = 4.7))
-wt.avg(cas_com10)
-reconstruct(cas_com10, "DOY")
+##50% bloom date####
+#compare results when using 1996-2020 and 1996-2023
 
-#Papaver
-pap10=plant_prop10%>%filter(group=="Papaver")
-pap_com10=analyze.wavelet(pap10, "DOY", make.pval = TRUE, n.sim = 10)
-wt.image(pap_com10, color.key = "quantile",main="Papaver", n.levels = 250,  legend.params = list(lab = "wavelet power levels", mar = 4.7))
-wt.avg(cas_com10)
-reconstruct(cas_com10, "DOY")
+#Dryas####
+dry1=phne_dat%>%filter(Species=="Dryas")
+dry2=phne_dat2%>%filter(Species=="Dryas")
 
-#MEAN TIMING
-#plant 50
-plant_prop50=plant_grp%>%
-  group_by(year, group)%>%
-  mutate(cum_tot=cumsum(Flowers),
-         cum_pt=cum_tot/sum(Flowers),
-         PD_50=if_else(cum_pt>=0.5,"1", "0"))%>%
-  filter(PD_50==1)%>%slice_head(n=1)%>%
-  select(group, year, DOY, cum_pt, cum_tot)
+dry_com1=analyze.wavelet(dry1, "mean_doy", make.pval = TRUE, n.sim = 10)
+reconstruct(dry_com1, "mean_doy", show.legend = F,
+            spec.time.axis =list(at = seq(1, length(dry1$Year), by = 1), labels = unique(dry1$Year)))
+wt.image(dry_com1, color.key = "quantile",main="Dryas (1996-2020)",
+         n.levels = 250,  legend.params = list(lab = "wavelet power levels", mar = 4.7),
+         spec.time.axis =list(at = seq(1, length(dry1$Year), by = 1), labels = unique(dry1$Year)))
 
-par(mfrow=c(2,3))
+dry_com2=analyze.wavelet(dry2, "mean_doy", make.pval = TRUE, n.sim = 10)
+reconstruct(dry_com2, "mean_doy", show.legend = F,
+            spec.time.axis =list(at = seq(1, length(dry2$Year), by = 1), labels = unique(dry2$Year)))
+wt.image(dry_com2, color.key = "quantile",main="Dryas (1996-2023)",
+         n.levels = 250,  legend.params = list(lab = "wavelet power levels", mar = 4.7),
+         spec.time.axis =list(at = seq(1, length(dry2$Year), by = 1), labels = unique(dry2$Year)))
 
-#saxifraga
-sax50=plant_prop50%>%filter(group=="Saxifraga")
-sax_com50=analyze.wavelet(sax50, "DOY", make.pval = TRUE, n.sim = 10)
-wt.image(sax_com50, color.key = "quantile",main="Saxifraga", n.levels = 250,  legend.params = list(lab = "wavelet power levels", mar = 4.7))
-wt.avg(sax_com50)
-reconstruct(sax_com50, "DOY")
+#Salix####
+sal1=phne_dat%>%filter(Species=="Salix")
+sal2=phne_dat2%>%filter(Species=="Salix")
 
-#salix???
-sal50=plant_prop50%>%filter(group=="Salix")
-sal_com50=analyze.wavelet(sal50, "DOY", make.pval = TRUE, n.sim = 10)
-wt.image(sal_com50, color.key = "quantile",main="Salix", n.levels = 250,  legend.params = list(lab = "wavelet power levels", mar = 4.7))
-wt.avg(sal_com50)
-reconstruct(sal_com50, "DOY")
+sal_com1=analyze.wavelet(sal1, "mean_doy", make.pval = TRUE, n.sim = 10)
+reconstruct(sal_com1, "mean_doy", show.legend = F,
+            spec.time.axis =list(at = seq(1, length(sal1$Year), by = 1), labels = unique(sal1$Year)))
+wt.image(sal_com1, color.key = "quantile",main="Salix (1996-2020)",
+         n.levels = 250,  legend.params = list(lab = "wavelet power levels", mar = 4.7),
+         spec.time.axis =list(at = seq(1, length(sal1$Year), by = 1), labels = unique(sal1$Year)))
 
-#dryas
-dry50=plant_prop50%>%filter(group=="Dryas")
-dry_com50=analyze.wavelet(dry50, "DOY", make.pval = TRUE, n.sim = 10)
-wt.image(dry_com50, color.key = "quantile", n.levels = 250,main="Dryas",  legend.params = list(lab = "wavelet power levels", mar = 4.7))
-wt.avg(dry_com50)
-reconstruct(dry_com50, "DOY")
+sal_com2=analyze.wavelet(sal2, "mean_doy", make.pval = TRUE, n.sim = 10)
+reconstruct(sal_com2, "mean_doy", show.legend = F,
+            spec.time.axis =list(at = seq(1, length(sal2$Year), by = 1), labels = unique(sal2$Year)))
+wt.image(sal_com2, color.key = "quantile",main="Salix (1996-2023)",
+         n.levels = 250,  legend.params = list(lab = "wavelet power levels", mar = 4.7),
+         spec.time.axis =list(at = seq(1, length(sal2$Year), by = 1), labels = unique(sal2$Year)))
 
-#cassiope
 
-cas50=plant_prop50%>%filter(group=="Cassiope")
-cas_com50=analyze.wavelet(cas50, "DOY", make.pval = TRUE, n.sim = 10)
-wt.image(cas_com50, color.key = "quantile",main="Cassiope", n.levels = 250,  legend.params = list(lab = "wavelet power levels", mar = 4.7))
-wt.avg(cas_com50)
-reconstruct(cas_com50, "DOY")
+#Cassiope####
+cas1=phne_dat%>%filter(Species=="Cassiope")
+cas2=phne_dat2%>%filter(Species=="Cassiope")
 
-#Silene
-sil50=plant_prop50%>%filter(group=="Silene")
-sil_com50=analyze.wavelet(sil50, "DOY", make.pval = TRUE, n.sim = 10)
-wt.image(sil_com50, color.key = "quantile",main="Silene", n.levels = 250,  legend.params = list(lab = "wavelet power levels", mar = 4.7))
-wt.avg(cas_com50)
-reconstruct(cas_com50, "DOY")
+cas_com1=analyze.wavelet(cas1, "mean_doy", make.pval = TRUE, n.sim = 10)
+reconstruct(cas_com1, "mean_doy", show.legend = F,
+            spec.time.axis =list(at = seq(1, length(cas1$Year), by = 1), labels = unique(cas1$Year)))
+wt.image(cas_com1, color.key = "quantile",main="Cassiope (1996-2020)",
+         n.levels = 250,  legend.params = list(lab = "wavelet power levels", mar = 4.7),
+         spec.time.axis =list(at = seq(1, length(cas1$Year), by = 1), labels = unique(cas1$Year)))
 
-#Papaver
-pap50=plant_prop50%>%filter(group=="Papaver")
-pap_com50=analyze.wavelet(pap50, "DOY", make.pval = TRUE, n.sim = 10)
-wt.image(pap_com50, color.key = "quantile",main="Papaver", n.levels = 250,  legend.params = list(lab = "wavelet power levels", mar = 4.7))
-wt.avg(cas_com50)
-reconstruct(cas_com50, "DOY")
+cas_com2=analyze.wavelet(cas2, "mean_doy", make.pval = TRUE, n.sim = 10)
+reconstruct(cas_com2, "mean_doy", show.legend = F,
+            spec.time.axis =list(at = seq(1, length(cas2$Year), by = 1), labels = unique(cas2$Year)))
+wt.image(cas_com2, color.key = "quantile",main="Cassiope (1996-2023)",
+         n.levels = 250,  legend.params = list(lab = "wavelet power levels", mar = 4.7),
+         spec.time.axis =list(at = seq(1, length(cas2$Year), by = 1), labels = unique(cas2$Year)))
 
-#plant 90
-plant_prop90=plant_grp%>%
-  group_by(year, group)%>%
-  mutate(cum_tot=cumsum(Flowers),
-         cum_pt=cum_tot/sum(Flowers),
-         PD_90=if_else(cum_pt>=0.9,"1", "0"))%>%
-  filter(PD_90==1)%>%slice_head(n=1)%>%
-  select(group, year, DOY, cum_pt, cum_tot)
+#Silene####
+sil1=phne_dat%>%filter(Species=="Silene")
+sil2=phne_dat2%>%filter(Species=="Silene")
 
-par(mfrow=c(2,3))
+sil_com1=analyze.wavelet(sil1, "mean_doy", make.pval = TRUE, n.sim = 10)
+reconstruct(sil_com1, "mean_doy", show.legend = F,
+            spec.time.axis =list(at = seq(1, length(sil1$Year), by = 1), labels = unique(sil1$Year)))
+wt.image(sil_com1, color.key = "quantile",main="Silene (1996-2020)",
+         n.levels = 250,  legend.params = list(lab = "wavelet power levels", mar = 4.7),
+         spec.time.axis =list(at = seq(1, length(sil1$Year), by = 1), labels = unique(sil1$Year)))
 
-#saxifraga
-sax90=plant_prop90%>%filter(group=="Saxifraga")
-sax_com90=analyze.wavelet(sax90, "DOY", make.pval = TRUE, n.sim = 10)
-wt.image(sax_com90, color.key = "quantile",main="Saxifraga", n.levels = 250,  legend.params = list(lab = "wavelet power levels", mar = 4.7))
-wt.avg(sax_com90)
-reconstruct(sax_com90, "DOY")
+sil_com2=analyze.wavelet(sil2, "mean_doy", make.pval = TRUE, n.sim = 10)
+reconstruct(sil_com2, "mean_doy", show.legend = F,
+            spec.time.axis =list(at = seq(1, length(sil2$Year), by = 1), labels = unique(sil2$Year)))
+wt.image(sil_com2, color.key = "quantile",main="Silene (1996-2023)",
+         n.levels = 250,  legend.params = list(lab = "wavelet power levels", mar = 4.7),
+         spec.time.axis =list(at = seq(1, length(sil2$Year), by = 1), labels = unique(sil2$Year)))
 
-#saliX
-sal90=plant_prop90%>%filter(group=="Salix")
-sal_com90=analyze.wavelet(sal90, "DOY", make.pval = TRUE, n.sim = 10)
-wt.image(sal_com90, color.key = "quantile",main="Salix", n.levels = 250,  legend.params = list(lab = "wavelet power levels", mar = 4.7))
-wt.avg(sal_com90)
-reconstruct(sal_com90, "DOY")
+#Saxifraga####
 
-#dryas
-dry90=plant_prop90%>%filter(group=="Dryas")
-dry_com90=analyze.wavelet(dry90, "DOY", make.pval = TRUE, n.sim = 10)
-wt.image(dry_com90, color.key = "quantile", n.levels = 250,main="Dryas",  legend.params = list(lab = "wavelet power levels", mar = 4.7))
-wt.avg(dry_com90)
-reconstruct(dry_com90, "DOY")
+sax1=phne_dat%>%filter(Species=="Saxifraga")
+sax2=phne_dat2%>%filter(Species=="Saxifraga")
 
-#cassiope
+sax_com1=analyze.wavelet(sax1, "mean_doy", make.pval = TRUE, n.sim = 10)
+reconstruct(sax_com1, "mean_doy", show.legend = F,
+            spec.time.axis =list(at = seq(1, length(sax1$Year), by = 1), labels = unique(sax1$Year)))
+wt.image(sax_com1, color.key = "quantile",main="Saxifraga (1996-2020)",
+         n.levels = 250,  legend.params = list(lab = "wavelet power levels", mar = 4.7),
+         spec.time.axis =list(at = seq(1, length(sax1$Year), by = 1), labels = unique(sax1$Year)))
 
-cas90=plant_prop90%>%filter(group=="Cassiope")
-cas_com90=analyze.wavelet(cas90, "DOY", make.pval = TRUE, n.sim = 10)
-wt.image(cas_com90, color.key = "quantile",main="Cassiope", n.levels = 250,  legend.params = list(lab = "wavelet power levels", mar = 4.7))
-wt.avg(cas_com90)
-reconstruct(cas_com90, "DOY")
+sax_com2=analyze.wavelet(sax2, "mean_doy", make.pval = TRUE, n.sim = 10)
+reconstruct(sax_com2, "mean_doy", show.legend = F,
+            spec.time.axis =list(at = seq(1, length(sax2$Year), by = 1), labels = unique(sax2$Year)))
+wt.image(sil_com2, color.key = "quantile",main="Saxifraga (1996-2023)",
+         n.levels = 250,  legend.params = list(lab = "wavelet power levels", mar = 4.7),
+         spec.time.axis =list(at = seq(1, length(sax2$Year), by = 1), labels = unique(sax2$Year)))
 
-#Silene
-sil90=plant_prop90%>%filter(group=="Silene")
-sil_com90=analyze.wavelet(sil90, "DOY", make.pval = TRUE, n.sim = 10)
-wt.image(sil_com90, color.key = "quantile",main="Silene", n.levels = 250,  legend.params = list(lab = "wavelet power levels", mar = 4.7))
-wt.avg(cas_com90)
-reconstruct(cas_com90, "DOY")
+#Papaver####
 
-#Papaver
-pap90=plant_prop90%>%filter(group=="Papaver")
-pap_com90=analyze.wavelet(pap90, "DOY", make.pval = TRUE, n.sim = 10)
-wt.image(pap_com90, color.key = "quantile",main="Papaver", n.levels = 250,  legend.params = list(lab = "wavelet power levels", mar = 4.7))
-wt.avg(cas_com90)
-reconstruct(cas_com90, "DOY")
+pap1=phne_dat%>%filter(Species=="Papaver")
+pap2=phne_dat2%>%filter(Species=="Papaver")
+
+pap_com1=analyze.wavelet(pap1, "mean_doy", make.pval = TRUE, n.sim = 10)
+reconstruct(pap_com1, "mean_doy", show.legend = F,
+            spec.time.axis =list(at = seq(1, length(pap1$Year), by = 1), labels = unique(pap1$Year)))
+wt.image(pap_com1, color.key = "quantile",main="Papaver (1996-2020)",
+         n.levels = 250,  legend.params = list(lab = "wavelet power levels", mar = 4.7),
+         spec.time.axis =list(at = seq(1, length(pap1$Year), by = 1), labels = unique(pap1$Year)))
+
+pap_com2=analyze.wavelet(pap2, "mean_doy", make.pval = TRUE, n.sim = 10)
+reconstruct(pap_com2, "mean_doy", show.legend = F,
+            spec.time.axis =list(at = seq(1, length(pap2$Year), by = 1), labels = unique(pap2$Year)))
+wt.image(pap_com2, color.key = "quantile",main="Papaver (1996-2023)",
+         n.levels = 250,  legend.params = list(lab = "wavelet power levels", mar = 4.7),
+         spec.time.axis =list(at = seq(1, length(pap2$Year), by = 1), labels = unique(pap2$Year)))
+
+phne_dat10=read.csv("I:\\My Drive\\SLU\\phenology-project\\ZackPhen\\ZAC_plant_phenology_1996-2023.csv")%>%
+  group_by(Species, Year)%>%summarise(mean_doy10=mean(DOY_10_flowering))
+
+##10% bloom date####
+#Dryas####
+dry2=phne_dat10%>%filter(Species=="Dryas")
+
+dry_com2=analyze.wavelet(dry2, "mean_doy10", make.pval = TRUE, n.sim = 10)
+reconstruct(dry_com2, "mean_doy10", show.legend = F,
+            spec.time.axis =list(at = seq(1, length(dry2$Year), by = 1), labels = unique(dry2$Year)))
+wt.image(dry_com2, color.key = "quantile",main="Dryas (10% bloom)",
+         n.levels = 250,  legend.params = list(lab = "wavelet power levels", mar = 4.7),
+         spec.time.axis =list(at = seq(1, length(dry2$Year), by = 1), labels = unique(dry2$Year)))
+
+#Salix####
+sal2=phne_dat10%>%filter(Species=="Salix")
+
+sal_com2=analyze.wavelet(sal2, "mean_doy10", make.pval = TRUE, n.sim = 10)
+reconstruct(sal_com2, "mean_doy10", show.legend = F,
+            spec.time.axis =list(at = seq(1, length(sal2$Year), by = 1), labels = unique(sal2$Year)))
+wt.image(sal_com2, color.key = "quantile",main="Salix (10% bloom)",
+         n.levels = 250,  legend.params = list(lab = "wavelet power levels", mar = 4.7),
+         spec.time.axis =list(at = seq(1, length(sal2$Year), by = 1), labels = unique(sal2$Year)))
+
+
+#Cassiope####
+cas2=phne_dat10%>%filter(Species=="Cassiope")
+
+cas_com2=analyze.wavelet(cas2, "mean_doy10", make.pval = TRUE, n.sim = 10)
+reconstruct(cas_com2, "mean_doy10", show.legend = F,
+            spec.time.axis =list(at = seq(1, length(cas2$Year), by = 1), labels = unique(cas2$Year)))
+wt.image(cas_com2, color.key = "quantile",main="Cassiope (10% bloom)",
+         n.levels = 250,  legend.params = list(lab = "wavelet power levels", mar = 4.7),
+         spec.time.axis =list(at = seq(1, length(cas2$Year), by = 1), labels = unique(cas2$Year)))
+
+#Silene####
+sil2=phne_dat10%>%filter(Species=="Silene")
+
+sil_com2=analyze.wavelet(sil2, "mean_doy10", make.pval = TRUE, n.sim = 10)
+reconstruct(sil_com2, "mean_doy10", show.legend = F,
+            spec.time.axis =list(at = seq(1, length(sil2$Year), by = 1), labels = unique(sil2$Year)))
+wt.image(sil_com2, color.key = "quantile",main="Silene (10% bloom)",
+         n.levels = 250,  legend.params = list(lab = "wavelet power levels", mar = 4.7),
+         spec.time.axis =list(at = seq(1, length(sil2$Year), by = 1), labels = unique(sil2$Year)))
+
+#Saxifraga####
+sax2=phne_dat10%>%filter(Species=="Saxifraga")
+
+sax_com2=analyze.wavelet(sax2, "mean_doy10", make.pval = TRUE, n.sim = 10)
+reconstruct(sax_com2, "mean_doy10", show.legend = F,
+            spec.time.axis =list(at = seq(1, length(sax2$Year), by = 1), labels = unique(sax2$Year)))
+wt.image(sax_com2, color.key = "quantile",main="Saxifraga (10% bloom)",
+         n.levels = 250,  legend.params = list(lab = "wavelet power levels", mar = 4.7),
+         spec.time.axis =list(at = seq(1, length(sax2$Year), by = 1), labels = unique(sax2$Year)))
+
+#Papaver####
+pap2=phne_dat10%>%filter(Species=="Papaver")
+
+pap_com2=analyze.wavelet(pap2, "mean_doy10", make.pval = TRUE, n.sim = 10)
+reconstruct(pap_com2, "mean_doy10", show.legend = F,
+            spec.time.axis =list(at = seq(1, length(pap2$Year), by = 1), labels = unique(pap2$Year)))
+wt.image(pap_com2, color.key = "quantile",main="Papaver (10% bloom)",
+         n.levels = 250,  legend.params = list(lab = "wavelet power levels", mar = 4.7),
+         spec.time.axis =list(at = seq(1, length(pap2$Year), by = 1), labels = unique(pap2$Year)))
+
+##90% bloom date####
+phne_dat90=read.csv("I:\\My Drive\\SLU\\phenology-project\\ZackPhen\\ZAC_plant_phenology_1996-2023.csv")%>%
+  group_by(Species, Year)%>%summarise(mean_doy90=mean(DOY_90_flowering))
+
+#Dryas####
+dry2=phne_dat90%>%filter(Species=="Dryas")
+
+dry_com2=analyze.wavelet(dry2, "mean_doy90", make.pval = TRUE, n.sim = 10)
+reconstruct(dry_com2, "mean_doy90", show.legend = F,
+            spec.time.axis =list(at = seq(1, length(dry2$Year), by = 1), labels = unique(dry2$Year)))
+wt.image(dry_com2, color.key = "quantile",main="Dryas (90% bloom)",
+         n.levels = 250,  legend.params = list(lab = "wavelet power levels", mar = 4.7),
+         spec.time.axis =list(at = seq(1, length(dry2$Year), by = 1), labels = unique(dry2$Year)))
+
+#Salix####
+sal2=phne_dat90%>%filter(Species=="Salix")
+
+sal_com2=analyze.wavelet(sal2, "mean_doy90", make.pval = TRUE, n.sim = 10)
+reconstruct(sal_com2, "mean_doy90", show.legend = F,
+            spec.time.axis =list(at = seq(1, length(sal2$Year), by = 1), labels = unique(sal2$Year)))
+wt.image(sal_com2, color.key = "quantile",main="Salix (90% bloom)",
+         n.levels = 250,  legend.params = list(lab = "wavelet power levels", mar = 4.7),
+         spec.time.axis =list(at = seq(1, length(sal2$Year), by = 1), labels = unique(sal2$Year)))
+
+#Cassiope####
+cas2=phne_dat90%>%filter(Species=="Cassiope")
+
+cas_com2=analyze.wavelet(cas2, "mean_doy90", make.pval = TRUE, n.sim = 10)
+reconstruct(cas_com2, "mean_doy90", show.legend = F,
+            spec.time.axis =list(at = seq(1, length(cas2$Year), by = 1), labels = unique(cas2$Year)))
+wt.image(cas_com2, color.key = "quantile",main="Cassiope (90% bloom)",
+         n.levels = 250,  legend.params = list(lab = "wavelet power levels", mar = 4.7),
+         spec.time.axis =list(at = seq(1, length(cas2$Year), by = 1), labels = unique(cas2$Year)))
+
+#Silene####
+sil2=phne_dat90%>%filter(Species=="Silene")
+
+sil_com2=analyze.wavelet(sil2, "mean_doy90", make.pval = TRUE, n.sim = 10)
+reconstruct(sil_com2, "mean_doy90", show.legend = F,
+            spec.time.axis =list(at = seq(1, length(sil2$Year), by = 1), labels = unique(sil2$Year)))
+wt.image(sil_com2, color.key = "quantile",main="Silene (90% bloom)",
+         n.levels = 250,  legend.params = list(lab = "wavelet power levels", mar = 4.7),
+         spec.time.axis =list(at = seq(1, length(sil2$Year), by = 1), labels = unique(sil2$Year)))
+
+#Saxifraga####
+sax2=phne_dat90%>%filter(Species=="Saxifraga")
+
+sax_com2=analyze.wavelet(sax2, "mean_doy90", make.pval = TRUE, n.sim = 10)
+reconstruct(sax_com2, "mean_doy90", show.legend = F,
+            spec.time.axis =list(at = seq(1, length(sax2$Year), by = 1), labels = unique(sax2$Year)))
+wt.image(sax_com2, color.key = "quantile",main="Saxifraga (90% bloom)",
+         n.levels = 250,  legend.params = list(lab = "wavelet power levels", mar = 4.7),
+         spec.time.axis =list(at = seq(1, length(sax2$Year), by = 1), labels = unique(sax2$Year)))
+
+#Papaver####
+pap2=phne_dat90%>%filter(Species=="Papaver")
+
+pap_com2=analyze.wavelet(pap2, "mean_doy90", make.pval = TRUE, n.sim = 10)
+reconstruct(pap_com2, "mean_doy90", show.legend = F,
+            spec.time.axis =list(at = seq(1, length(pap2$Year), by = 1), labels = unique(pap2$Year)))
+wt.image(pap_com2, color.key = "quantile",main="Papaver (90% bloom)",
+         n.levels = 250,  legend.params = list(lab = "wavelet power levels", mar = 4.7),
+         spec.time.axis =list(at = seq(1, length(pap2$Year), by = 1), labels = unique(pap2$Year)))
+
+
+
+
