@@ -432,6 +432,73 @@ wt.image(pap_com2, color.key = "quantile",main="Papaver (90% bloom)",
          n.levels = 250,  legend.params = list(lab = "wavelet power levels", mar = 4.7),
          spec.time.axis =list(at = seq(1, length(pap2$Year), by = 1), labels = unique(pap2$Year)))
 
+##duration####
+plant_timing=read.csv("I:\\My Drive\\SLU\\phenology-project\\ZackPhen\\ZAC_plant_phenology_1996-2023.csv")
+
+plant_timings=plant_timing%>%
+  mutate(duration=DOY_90_flowering-DOY_10_flowering)%>%
+  group_by(Species, Year)%>%summarise(mean_duration=mean(duration))
+
+par(mfrow=c(2,1))
+
+#Dryas####
+dry2=plant_timings%>%filter(Species=="Dryas")
+
+dry_com2=analyze.wavelet(dry2, "mean_duration", make.pval = TRUE, n.sim = 10)
+reconstruct(dry_com2, "mean_duration", show.legend = F,
+            spec.time.axis =list(at = seq(1, length(dry2$Year), by = 1), labels = unique(dry2$Year)))
+wt.image(dry_com2, color.key = "quantile",main="Dryas (duration)",
+         n.levels = 250,  legend.params = list(lab = "wavelet power levels", mar = 4.7),
+         spec.time.axis =list(at = seq(1, length(dry2$Year), by = 1), labels = unique(dry2$Year)))
+
+#Salix####
+sal2=plant_timings%>%filter(Species=="Salix")
+
+sal_com2=analyze.wavelet(sal2, "mean_duration", make.pval = TRUE, n.sim = 10)
+reconstruct(sal_com2, "mean_duration", show.legend = F,
+            spec.time.axis =list(at = seq(1, length(sal2$Year), by = 1), labels = unique(sal2$Year)))
+wt.image(sal_com2, color.key = "quantile",main="Salix (duration)",
+         n.levels = 250,  legend.params = list(lab = "wavelet power levels", mar = 4.7),
+         spec.time.axis =list(at = seq(1, length(sal2$Year), by = 1), labels = unique(sal2$Year)))
+
+#Silene####
+sil2=plant_timings%>%filter(Species=="Silene")
+
+sil_com2=analyze.wavelet(sil2, "mean_duration", make.pval = TRUE, n.sim = 10)
+reconstruct(sil_com2, "mean_duration", show.legend = F,
+            spec.time.axis =list(at = seq(1, length(sil2$Year), by = 1), labels = unique(sil2$Year)))
+wt.image(sil_com2, color.key = "quantile",main="Silene (duration)",
+         n.levels = 250,  legend.params = list(lab = "wavelet power levels", mar = 4.7),
+         spec.time.axis =list(at = seq(1, length(sil2$Year), by = 1), labels = unique(sil2$Year)))
+#Cassiope####
+cas2=plant_timings%>%filter(Species=="Cassiope")
+
+cas_com2=analyze.wavelet(cas2, "mean_duration", make.pval = TRUE, n.sim = 10)
+reconstruct(cas_com2, "mean_duration", show.legend = F,
+            spec.time.axis =list(at = seq(1, length(cas2$Year), by = 1), labels = unique(cas2$Year)))
+wt.image(cas_com2, color.key = "quantile",main="Cassiope (duration)",
+         n.levels = 250,  legend.params = list(lab = "wavelet power levels", mar = 4.7),
+         spec.time.axis =list(at = seq(1, length(cas2$Year), by = 1), labels = unique(cas2$Year)))
+
+#Saxifraga####
+sax2=plant_timings%>%filter(Species=="Saxifraga")
+
+sax_com2=analyze.wavelet(sax2, "mean_duration", make.pval = TRUE, n.sim = 10)
+reconstruct(sax_com2, "mean_duration", show.legend = F,
+            spec.time.axis =list(at = seq(1, length(sax2$Year), by = 1), labels = unique(sax2$Year)))
+wt.image(sax_com2, color.key = "quantile",main="Saxifraga (duration)",
+         n.levels = 250,  legend.params = list(lab = "wavelet power levels", mar = 4.7),
+         spec.time.axis =list(at = seq(1, length(sax2$Year), by = 1), labels = unique(sax2$Year)))
+
+#Papaver####
+pap2=plant_timings%>%filter(Species=="Papaver")
+
+pap_com2=analyze.wavelet(pap2, "mean_duration", make.pval = TRUE, n.sim = 10)
+reconstruct(pap_com2, "mean_duration", show.legend = F,
+            spec.time.axis =list(at = seq(1, length(pap2$Year), by = 1), labels = unique(pap2$Year)))
+wt.image(pap_com2, color.key = "quantile",main="Papaver (duration)",
+         n.levels = 250,  legend.params = list(lab = "wavelet power levels", mar = 4.7),
+         spec.time.axis =list(at = seq(1, length(pap2$Year), by = 1), labels = unique(pap2$Year)))
 
 
 
