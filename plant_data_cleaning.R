@@ -246,3 +246,14 @@ plant_timing=plant_timing%>%filter(Plot%in%target_plots)
 
 plant_timings=plant_timing%>%
   pivot_longer(cols=c(DOY_10_flowering:DOY_90_flowering), names_to="period")
+
+phne_dat10=read.csv("I:\\My Drive\\SLU\\phenology-project\\ZackPhen\\ZAC_plant_phenology_1996-2023.csv")%>%
+  group_by(Species, Year, Plot)%>%summarise(mean_doy10=mean(DOY_10_flowering))%>%rename(DOY=mean_doy10)%>%mutate(metric="10")
+phne_dat50=read.csv("I:\\My Drive\\SLU\\phenology-project\\ZackPhen\\ZAC_plant_phenology_1996-2023.csv")%>%
+  group_by(Species, Year, Plot)%>%summarise(mean_doy50=mean(DOY_50_flowering))%>%rename(DOY=mean_doy50)%>%mutate(metric="50")
+phne_dat90=read.csv("I:\\My Drive\\SLU\\phenology-project\\ZackPhen\\ZAC_plant_phenology_1996-2023.csv")%>%
+  group_by(Species, Year, Plot)%>%summarise(mean_doy90=mean(DOY_90_flowering))%>%rename(DOY=mean_doy90)%>%mutate(metric="90")
+
+
+phen_dat_all=bind_rows(phne_dat10, phne_dat50,phne_dat90)
+#write.csv(phen_dat_all, "ZAC_phenology_metrics_1996-2023.csv")

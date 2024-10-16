@@ -500,5 +500,465 @@ wt.image(pap_com2, color.key = "quantile",main="Papaver (duration)",
          n.levels = 250,  legend.params = list(lab = "wavelet power levels", mar = 4.7),
          spec.time.axis =list(at = seq(1, length(pap2$Year), by = 1), labels = unique(pap2$Year)))
 
+#focal species####
+phen_dat_all=read.csv("I:\\My Drive\\SLU\\phenology-project\\ZackPhen\\ZAC_phenology_metrics_1996-2023.csv")
+foc_dat=phen_dat_all%>%filter(Species%in%c("Dryas", "Salix"))
+
+require(ggplot2)
+
+ggplot(foc_dat, aes(x=DOY, col=Year, fill=Year))+
+  geom_histogram(position="dodge", binwidth = 50)+
+  facet_wrap(vars(Species, metric))+theme_classic()
+
+#moving window analyses####
+#Dryas####
+dry2_dat=foc_dat%>%filter(Species=="Dryas", Plot=="Dry2", metric=="50")
+
+dry2_dat_ro <-
+  rolling_origin(
+    data       = dry2_dat, #all PB control data (1999-2009)
+    initial    = 10, #samples used for modelling (training)
+    assess     = 3, # number of samples used for each assessment resample (horizon)
+    cumulative = TRUE #length of analysis set is fixed
+  )
+
+rolling_mod=function(split) {
+
+  analysis_set= analysis(split) #get dataframe
+
+  fit_model= lm(analysis_set[,"DOY"]~analysis_set[,"Year"])
+}
+
+dry2_dat_ro$model=map(dry2_dat_ro$splits, rolling_mod)
+
+get_pvalue=function(model) {
+
+  coefficients <- summary(model)$coefficients
+  pval=coefficients[8]
+}
+
+dry2_dat_ro$slope=dry2_dat_ro$model%>%map(coef)%>%map_dbl(2)
+dry2_dat_ro$pval=map(dry2_dat_ro$model, get_pvalue)
+
+
+require(ggpubr)
+
+ds=dry2_dat_ro%>%select(slope, id, pval)%>%mutate(metric="50")
+ggdensity(ds, x="slope", add="median")
+
+#10% bloom####
+dry2_dat10=foc_dat%>%filter(Species=="Dryas", Plot=="Dry2", metric=="10")
+
+dry2_dat10_ro <-
+  rolling_origin(
+    data       = dry2_dat10, #all PB control data (1999-2009)
+    initial    = 10, #samples used for modelling (training)
+    assess     = 3, # number of samples used for each assessment resample (horizon)
+    cumulative = TRUE #length of analysis set is fixed
+  )
+
+rolling_mod=function(split) {
+
+  analysis_set= analysis(split) #get dataframe
+
+  fit_model= lm(analysis_set[,"DOY"]~analysis_set[,"Year"])
+}
+
+dry2_dat10_ro$model=map(dry2_dat10_ro$splits, rolling_mod)
+
+dry2_dat10_ro$slope=dry2_dat10_ro$model%>%map(coef)%>%map_dbl(2)
+
+get_pvalue=function(model) {
+
+  coefficients <- summary(model)$coefficients
+  pval=coefficients[8]
+}
+
+dry2_dat10_ro$pval=map(dry2_dat10_ro$model, get_pvalue)
+
+
+require(ggpubr)
+
+ds10=dry2_dat10_ro%>%select(slope, id, pval)%>%mutate(metric="10")
+ggdensity(ds10, x="slope", add="median")
+
+dry2_dat90=foc_dat%>%filter(Species=="Dryas", Plot=="Dry2", metric=="90")
+
+dry2_dat90_ro <-
+  rolling_origin(
+    data       = dry2_dat90, #all PB control data (1999-2009)
+    initial    = 10, #samples used for modelling (training)
+    assess     = 3, # number of samples used for each assessment resample (horizon)
+    cumulative = TRUE #length of analysis set is fixed
+  )
+
+rolling_mod=function(split) {
+
+  analysis_set= analysis(split) #get dataframe
+
+  fit_model= lm(analysis_set[,"DOY"]~analysis_set[,"Year"])
+}
+
+dry2_dat90_ro$model=map(dry2_dat90_ro$splits, rolling_mod)
+
+dry2_dat90_ro$slope=dry2_dat90_ro$model%>%map(coef)%>%map_dbl(2)
+
+get_pvalue=function(model) {
+
+  coefficients <- summary(model)$coefficients
+  pval=coefficients[8]
+}
+
+dry2_dat90_ro$pval=map(dry2_dat90_ro$model, get_pvalue)
+
+
+require(ggpubr)
+
+ds90=dry2_dat90_ro%>%select(slope, id, pval)%>%mutate(metric="90")
+ggdensity(ds90, x="slope", add="median")
+
+
+dry2_dens=bind_rows(ds, ds10, ds90)
+ggdensity(dry2_dens, x="slope", add="median", size=1, col="metric", fill="metric")+
+  geom_vline(xintercept = 0)+ggtitle("Dryas (Dry 2)")
+#moving window analyses####
+
+#MEAN ACROSS ALL PLOTS
+
+dry2_dat=foc_dat%>%filter(Species=="Dryas", metric=="50")
+
+dry2_dat=foc_dat%>%filter(Species=="Dryas", metric=="50")%>%
+  group_by(Year, metric)%>%
+  summarise(DOY=as.numeric(mean(DOY)))
+
+dry2_dat=as.data.frame(dry2_dat)
+
+dry2_dat_ro <-
+  rolling_origin(
+    data       = dry2_dat, #all PB control data (1999-2009)
+    initial    = 10, #samples used for modelling (training)
+    assess     = 3, # number of samples used for each assessment resample (horizon)
+    cumulative = FALSE #length of analysis set is fixed
+  )
+
+rolling_mod=function(split) {
+
+  analysis_set= analysis(split) #get dataframe
+
+  fit_model= lm(analysis_set[,"DOY"]~analysis_set[,"Year"])
+}
+
+dry2_dat_ro$model=map(dry2_dat_ro$splits, rolling_mod)
+
+get_pvalue=function(model) {
+
+  coefficients <- summary(model)$coefficients
+  pval=coefficients[8]
+}
+
+dry2_dat_ro$slope=dry2_dat_ro$model%>%map(coef)%>%map_dbl(2)
+dry2_dat_ro$pval=map(dry2_dat_ro$model, get_pvalue)
+
+
+require(ggpubr)
+
+ds=dry2_dat_ro%>%select(slope, id, pval)%>%mutate(metric="50")
+ggdensity(ds, x="slope", add="median")
+
+#10% bloom####
+dry2_dat10=foc_dat%>%filter(Species=="Dryas", metric=="10")%>%
+  group_by(Year, metric)%>%
+  summarise(DOY=as.numeric(mean(DOY)))
+
+dry2_dat10=as.data.frame(dry2_dat10)
+
+dry2_dat10_ro <-
+  rolling_origin(
+    data       = dry2_dat10, #all PB control data (1999-2009)
+    initial    = 10, #samples used for modelling (training)
+    assess     = 3, # number of samples used for each assessment resample (horizon)
+    cumulative = FALSE #length of analysis set is fixed
+  )
+
+rolling_mod=function(split) {
+
+  analysis_set= analysis(split) #get dataframe
+
+  fit_model= lm(analysis_set[,"DOY"]~analysis_set[,"Year"])
+}
+
+dry2_dat10_ro$model=map(dry2_dat10_ro$splits, rolling_mod)
+
+dry2_dat10_ro$slope=dry2_dat10_ro$model%>%map(coef)%>%map_dbl(2)
+
+get_pvalue=function(model) {
+
+  coefficients <- summary(model)$coefficients
+  pval=coefficients[8]
+}
+
+dry2_dat10_ro$pval=map(dry2_dat10_ro$model, get_pvalue)
+
+require(ggpubr)
+
+ds10=dry2_dat10_ro%>%select(slope, id, pval)%>%mutate(metric="10")
+ggdensity(ds10, x="slope", add="median")
+
+dry2_dat90=foc_dat%>%filter(Species=="Dryas", Plot=="Dry2", metric=="90")%>%
+  group_by(Year, metric)%>%
+  summarise(DOY=as.numeric(mean(DOY)))
+
+dry2_dat90=as.data.frame(dry2_dat90)
+
+dry2_dat90_ro <-
+  rolling_origin(
+    data       = dry2_dat90, #all PB control data (1999-2009)
+    initial    = 10, #samples used for modelling (training)
+    assess     = 3, # number of samples used for each assessment resample (horizon)
+    cumulative = FALSE #length of analysis set is fixed
+  )
+
+rolling_mod=function(split) {
+
+  analysis_set= analysis(split) #get dataframe
+
+  fit_model= lm(analysis_set[,"DOY"]~analysis_set[,"Year"])
+}
+
+dry2_dat90_ro$model=map(dry2_dat90_ro$splits, rolling_mod)
+
+dry2_dat90_ro$slope=dry2_dat90_ro$model%>%map(coef)%>%map_dbl(2)
+
+get_pvalue=function(model) {
+
+  coefficients <- summary(model)$coefficients
+  pval=coefficients[8]
+}
+
+dry2_dat90_ro$pval=map(dry2_dat90_ro$model, get_pvalue)
+
+require(ggpubr)
+
+ds90=dry2_dat90_ro%>%select(slope, id, pval)%>%mutate(metric="90")
+ggdensity(ds90, x="slope", add="median")
+
+dry2_dens=bind_rows(ds, ds10, ds90)
+
+dry2_dens$pval=as.vector(as.numeric(dry2_dens$pval))
+
+ggdensity(dry2_dens, x="slope", add="median", size=1, col="metric", fill="metric")+
+  geom_vline(xintercept = 0)+ggtitle("Dryas")
+
+ggdensity(dry2_dens, x="pval", add="median", size=1, col="metric", fill="metric")+
+  geom_vline(xintercept = 0.05)+ggtitle("Dryas")
+
+##Salix####
+###50% bloom####
+sa=foc_dat%>%filter(Species=="Salix")
+
+sal1_dat=foc_dat%>%filter(Species=="Salix", Plot=="Sal1", metric=="50")
+
+sal1_dat_ro <-
+  rolling_origin(
+    data       = sal1_dat, #all PB control data (1999-2009)
+    initial    = 10, #samples used for modelling (training)
+    assess     = 3, # number of samples used for each assessment resample (horizon)
+    cumulative = FALSE #length of analysis set is fixed
+  )
+
+rolling_mod=function(split) {
+
+  analysis_set= analysis(split) #get dataframe
+
+  fit_model= lm(analysis_set[,"DOY"]~analysis_set[,"Year"])
+}
+
+sal1_dat_ro$model=map(sal1_dat_ro$splits, rolling_mod)
+
+get_pvalue=function(model) {
+
+  coefficients <- summary(model)$coefficients
+  pval=coefficients[8]
+}
+
+sal1_dat_ro$slope=sal1_dat_ro$model%>%map(coef)%>%map_dbl(2)
+sal1_dat_ro$pval=map(sal1_dat_ro$model, get_pvalue)
+
+
+require(ggpubr)
+
+ds=sal1_dat_ro%>%select(slope, id, pval)%>%mutate(metric="50")
+ggdensity(ds, x="slope", add="median")
+
+##10% bloom####
+sal1_dat10=foc_dat%>%filter(Species=="Salix", Plot=="Sal1", metric=="10")
+
+sal1_dat10_ro <-
+  rolling_origin(
+    data       = sal1_dat10, #all PB control data (1999-2009)
+    initial    = 10, #samples used for modelling (training)
+    assess     = 3, # number of samples used for each assessment resample (horizon)
+    cumulative = FALSE #length of analysis set is fixed
+  )
+
+rolling_mod=function(split) {
+
+  analysis_set= analysis(split) #get dataframe
+
+  fit_model= lm(analysis_set[,"DOY"]~analysis_set[,"Year"])
+}
+
+sal1_dat10_ro$model=map(sal1_dat10_ro$splits, rolling_mod)
+
+sal1_dat10_ro$slope=sal1_dat10_ro$model%>%map(coef)%>%map_dbl(2)
+
+get_pvalue=function(model) {
+
+  coefficients <- summary(model)$coefficients
+  pval=coefficients[8]
+}
+
+sal1_dat10_ro$pval=map(sal1_dat10_ro$model, get_pvalue)
+
+
+require(ggpubr)
+
+ds10=sal1_dat10_ro%>%select(slope, id, pval)%>%mutate(metric="10")
+ggdensity(ds10, x="slope", add="median")
+
+###90% bloom####
+sal1_dat90=foc_dat%>%filter(Species=="Salix", Plot=="Sal1", metric=="90")
+
+sal1_dat90_ro <-
+  rolling_origin(
+    data       = sal1_dat90, #all PB control data (1999-2009)
+    initial    = 10, #samples used for modelling (training)
+    assess     = 3, # number of samples used for each assessment resample (horizon)
+    cumulative = FALSE #length of analysis set is fixed
+  )
+
+rolling_mod=function(split) {
+
+  analysis_set= analysis(split) #get dataframe
+
+  fit_model= lm(analysis_set[,"DOY"]~analysis_set[,"Year"])
+}
+
+sal1_dat90_ro$model=map(sal1_dat90_ro$splits, rolling_mod)
+
+sal1_dat90_ro$slope=sal1_dat90_ro$model%>%map(coef)%>%map_dbl(2)
+
+get_pvalue=function(model) {
+
+  coefficients <- summary(model)$coefficients
+  pval=coefficients[8]
+}
+
+sal1_dat90_ro$pval=map(sal1_dat90_ro$model, get_pvalue)
+
+
+require(ggpubr)
+
+ds90=sal1_dat90_ro%>%select(slope, id, pval)%>%mutate(metric="90")
+ggdensity(ds90, x="slope", add="median")
+
+
+sal1_dens=bind_rows(ds, ds10, ds90)
+sal1_dens$pval=as.vector(as.numeric(sal1_dens$pval))
+
+ggdensity(sal1_dens, x="slope", add="median", size=1, col="metric", fill="metric")+
+  geom_vline(xintercept = 0)+ggtitle("Salix (Sal1)")
+
+ggdensity(sal1_dens, x="pval", add="median", size=1, col="metric", fill="metric")+
+  geom_vline(xintercept = 0.05)+ggtitle("Salix (Sal1)")
+
+#MEAN ACROSS ALL PLOTS####
+###50% bloom####
+sal1_dat1=foc_dat%>%filter(Species=="Salix", metric=="50")%>%
+  group_by(Year, metric)%>%
+  summarise(DOY=as.numeric(mean(DOY)))
+
+sal1_dat1=as.data.frame(sal1_dat1)
+
+sal1_dat1_ro <-
+  rolling_origin(
+    data       = sal1_dat1, #all PB control data (1999-2009)
+    initial    = 10, #samples used for modelling (training)
+    assess     = 3, # number of samples used for each assessment resample (horizon)
+    cumulative = FALSE #length of analysis set is fixed
+  )
+
+sal1_dat1_ro$model=map(sal1_dat1_ro$splits, rolling_mod)
+
+sal1_dat1_ro$slope=sal1_dat1_ro$model%>%map(coef)%>%map_dbl(2)
+sal1_dat1_ro$pval=map(sal1_dat1_ro$model, get_pvalue)
+
+###10% bloom####
+sal1_dat10=foc_dat%>%filter(Species=="Salix", metric=="10")%>%
+  group_by(Year, metric)%>%
+  summarise(DOY=as.numeric(mean(DOY)))
+
+sal1_dat10=as.data.frame(sal1_dat10)
+
+sal1_dat10_ro <-
+  rolling_origin(
+    data       = sal1_dat10, #all PB control data (1999-2009)
+    initial    = 10, #samples used for modelling (training)
+    assess     = 3, # number of samples used for each assessment resample (horizon)
+    cumulative = FALSE #length of analysis set is fixed
+  )
+
+rolling_mod=function(split) {
+
+  analysis_set= analysis(split) #get dataframe
+
+  fit_model= lm(analysis_set[,"DOY"]~analysis_set[,"Year"])
+}
+
+sal1_dat10_ro$model=map(sal1_dat10_ro$splits, rolling_mod)
+
+sal1_dat10_ro$slope=sal1_dat10_ro$model%>%map(coef)%>%map_dbl(2)
+
+get_pvalue=function(model) {
+
+  coefficients <- summary(model)$coefficients
+  pval=coefficients[8]
+}
+
+sal1_dat10_ro$pval=map(sal1_dat10_ro$model, get_pvalue)
+s10=sal1_dat10_ro%>%select(slope, id, pval)%>%mutate(metric="10")
+
+###90% bloom####
+sal1_dat90=foc_dat%>%filter(Species=="Salix", Plot=="Sal1", metric=="90")%>%
+  group_by(Year, metric)%>%
+  summarise(DOY=as.numeric(mean(DOY)))
+
+sal1_dat90=as.data.frame(sal1_dat90)
+
+sal1_dat90_ro <-
+  rolling_origin(
+    data       = sal1_dat90, #all PB control data (1999-2009)
+    initial    = 10, #samples used for modelling (training)
+    assess     = 3, # number of samples used for each assessment resample (horizon)
+    cumulative = FALSE #length of analysis set is fixed
+  )
+
+sal1_dat90_ro$model=map(sal1_dat90_ro$splits, rolling_mod)
+
+sal1_dat90_ro$slope=sal1_dat90_ro$model%>%map(coef)%>%map_dbl(2)
+
+sal1_dat90_ro$pval=map(sal1_dat90_ro$model, get_pvalue)
+
+s90=sal1_dat90_ro%>%select(slope, id, pval)%>%mutate(metric="90")
+
+sal1_dens=bind_rows(s, s10, s90)
+
+sal1_dens$pval=as.vector(as.numeric(sal1_dens$pval))
+
+ggdensity(sal1_dens, x="slope", add="median", size=1, col="metric", fill="metric")+
+  geom_vline(xintercept = 0)+ggtitle("Salix")
+
+ggdensity(sal1_dens, x="pval", add="median", size=1, col="metric", fill="metric")+
+  geom_vline(xintercept = 0.05)+ggtitle("Salix")
 
 
