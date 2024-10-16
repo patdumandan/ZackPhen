@@ -961,4 +961,75 @@ ggdensity(sal1_dens, x="slope", add="median", size=1, col="metric", fill="metric
 ggdensity(sal1_dens, x="pval", add="median", size=1, col="metric", fill="metric")+
   geom_vline(xintercept = 0.05)+ggtitle("Salix")
 
+###duration####
+dur=foc_dat%>%select(-1)%>%
+  tidyr::pivot_wider(names_from=metric, values_from=DOY)%>%
+  rename(DOY_10=4, DOY_50=5, DOY_90=6)%>%
+  mutate(duration=DOY_90-DOY_10)
+
+sal_dur50=dur%>%filter(Species=="Salix")%>%
+  group_by(Year)%>%
+  summarise(mean_dur=as.numeric(mean(duration)))
+
+sal_dur50=as.data.frame(sal_dur50)
+
+ggplot(sal_dur50,aes(Year,mean_dur))+
+  geom_line()+theme_classic()+ggtitle("Salix")+
+  stat_smooth(method="lm")+ylab("mean duration")
+
+dry_dur50=dur%>%filter(Species=="Dryas")%>%
+  group_by(Year)%>%
+  summarise(mean_dur=as.numeric(mean(duration)))
+
+dry_dur50=as.data.frame(dry_dur50)
+
+ggplot(dry_dur50,aes(Year,mean_dur))+
+  geom_line()+theme_classic()+ggtitle("Dryas")+
+  stat_smooth(method="lm")+ylab("mean duration")
+
+rolling_mod=function(split) {
+
+  analysis_set= analysis(split) #get dataframe
+
+  fit_model= lm(analysis_set[,"mean_dur"]~analysis_set[,"Year"])
+}
+
+sal_dur_ro <-
+  rolling_origin(
+    data       = sal_dur50, #all PB control data (1999-2009)
+    initial    = 10, #samples used for modelling (training)
+    assess     = 3, # number of samples used for each assessment resample (horizon)
+    cumulative = TRUE #length of analysis set is fixed
+  )
+
+sal_dur_ro$model=map(sal_dur_ro$splits, rolling_mod)
+
+sal_dur_ro$slope=sal_dur_ro$model%>%map(coef)%>%map_dbl(2)
+sal_dur_ro$pval=map(sal_dur_ro$model, get_pvalue)
+
+dry_dur_ro <-
+  rolling_origin(
+    data       = dry_dur50, #all PB control data (1999-2009)
+    initial    = 10, #samples used for modelling (training)
+    assess     = 3, # number of samples used for each assessment resample (horizon)
+    cumulative = TRUE #length of analysis set is fixed
+  )
+
+dry_dur_ro$model=map(dry_dur_ro$splits, rolling_mod)
+
+dry_dur_ro$slope=dry_dur_ro$model%>%map(coef)%>%map_dbl(2)
+dry_dur_ro$pval=map(dry_dur_ro$model, get_pvalue)
+
+salm=sal_dur_ro%>%select(slope, id, pval)%>%mutate(species="Salix")
+drym=dry_dur_ro%>%select(slope, id, pval)%>%mutate(species="Dryas")
+
+foc_dens=bind_rows(salm, drym)
+
+foc_dens$pval=as.vector(as.numeric(foc_dens$pval))
+
+ggdensity(foc_dens, x="slope", add="median", size=1, col="species", fill="species")+
+  geom_vline(xintercept = 0)+ggtitle("duration")
+
+ggdensity(foc_dens, x="pval", add="median", size=1, col="species", fill="species")+
+  geom_vline(xintercept = 0.05)+ggtitle("duration")+xlab("p-value")
 
