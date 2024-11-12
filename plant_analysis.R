@@ -35,18 +35,10 @@ dry10=dryas_dat%>%filter(metric==10)
 dry50=dryas_dat%>%filter(metric==50)
 dry90=dryas_dat%>%filter(metric==90)
 
-all_yr_mod=brm(DOY~Year+(1|Plot), data=dry10)
-all_yr_mod50=brm(DOY~Year+(1|Plot), data=dry50)
-all_yr_mod90=brm(DOY~Year+(1|Plot), data=dry90)
-
 #Salix
 sal10=salix_dat%>%filter(metric==10)
 sal50=salix_dat%>%filter(metric==50)
 sal90=salix_dat%>%filter(metric==90)
-
-all_yrsal_mod=brm(DOY~Year+(1|Plot), data=sal10)
-all_yrsal_mod50=brm(DOY~Year+(1|Plot), data=sal50)
-all_yrsal_mod90=brm(DOY~Year+(1|Plot), data=sal90)
 
 #apply sliding-index to create subsets of training data at different windows
 #set 5 years of training data, rolling over every year (every 12 months)
@@ -58,7 +50,7 @@ dry10$Plot=as.factor(dry10$Plot)
 multi_YR_dat5=sliding_index(
   data= dry10, #all plots except 7 and 8
   index=Year,
-  lookback=10, #training data length
+  lookback=9, #training data length
   complete = TRUE,
   step=6 #every 6th row is a new year
 )
@@ -79,7 +71,7 @@ dry90$Plot=as.factor(dry90$Plot)
 multi_YR90_dat5=sliding_index(
   data= dry90, #all plots except 7 and 8
   index=Year,
-  lookback=10, #training data length (including starting year so -1)
+  lookback=9, #training data length (including starting year so -1)
   complete = TRUE,
   step=6 #every 6th row is a new year
 )
@@ -213,7 +205,7 @@ ggplot()+
   geom_line(data=sal_comb, aes(x=start_yr, y=slope, col=as.factor(metric)))+
   theme_classic()+ggtitle("Salix")
 
-#Summary> metric diffs####
+#Summary: metric diffs####
 foc_dat_diff=foc_dat%>%select(-1)%>%pivot_wider(names_from = "metric", values_from = "DOY")%>%
   rename("DOY_10"="10", "DOY_50"="50", "DOY_90"="90")%>%
   mutate(diffs_end=DOY_90-DOY_10,
@@ -227,11 +219,12 @@ ggplot(foc_dat_diff, aes(x=Year, y=values, col=as.factor(diffs)))+
   stat_smooth(method="gam")+facet_wrap(~Species)+
   theme_classic()
 
-f1=foc_dat_diff%>%filter(diffs=="diffs_end")
-f2=foc_dat_diff%>%filter(diffs=="diffs_startmid")
-f3=foc_dat_diff%>%filter(diffs=="diffs_midend")
+f1=foc_dat_diff%>%filter(diffs=="diffs_end", Species=="Salix")
+f2=foc_dat_diff%>%filter(diffs=="diffs_startmid", Species=="Salix")
+f3=foc_dat_diff%>%filter(diffs=="diffs_midend", Species=="Salix")
 
 summary(lme4::lmer(f1$values~f1$Year+(1|Plot), data=f1))
+summary(lm(f1$values~f1$Year))
 summary(lm(f2$values~f2$Year))
 summary(lm(f3$values~f3$Year))
 
@@ -532,3 +525,52 @@ cyc_grp_yr=cyc%>%
   summarise(tot_yr=28,
             cyc_yrs=sum(cyclicity),
             prop_cyc=cyc_yrs/tot_yr)
+
+#increase TS length####
+create_incremental_training_sets <- function(data, max_size, increment) {
+  # Create an empty list to store the training sets
+  training_sets <- list()
+
+  # Loop to create training sets of increasing size
+  for (size in seq(increment, max_size, by = increment)) {
+    # Ensure the size does not exceed the number of available rows
+    if (size <= nrow(data)) {
+
+      training_sets[[length(training_sets) + 1]] <- data[1:size, ]
+    }
+  }
+
+  return(training_sets)
+}
+
+# Create incrementally larger training sets
+
+# Define parameters
+max_size <- length(dry10$Year)  # Maximum size of the training set
+increment <- 6*5  # Incremental increase in size (5 years at a time)
+
+dry10_ts<- create_incremental_training_sets(dry10, max_size, increment)
+
+increasing_mod=function(dat) {
+
+  fit_model= lme4::lmer(dat[, "DOY"]~dat[, "Year"]+
+                          (1|Plot),data=dat)
+
+}
+
+get_yr=function(dat) {
+
+  end_yr=max(dat[,"Year"])
+
+  }
+
+year1=map(dry10_ts, get_yr)
+
+model1=map(dry10_ts, increasing_mod)
+train_dat=cbind(d1, training_sets)
+slope1=map(d1, fixef)%>%map_dbl(2)
+
+s1=d1%>%map(fixef)%>%map_dbl(2)%>%as.list()
+yr_start=rep(1996, 5)
+training_dat=cbind(d1, s1, y1, yr_start)
+
