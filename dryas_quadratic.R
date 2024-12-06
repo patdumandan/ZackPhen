@@ -49,25 +49,29 @@ require(ggplot2)
 ggplot(dry_datA, aes(x=DOY, y=value, col=period))+geom_point()+facet_wrap(~Plot)+
   theme_classic()+stat_smooth(method="gam")+ggtitle("A")
 
+#for scaling (look into 1 instead of 2 SDs)
 dry_datA$years = (dry_datA$year - mean(dry_datA$year))/(2 *sd(dry_datA$year))
 dry_datA$DOYs = (dry_datA$DOY - mean(dry_datA$DOY))/(2 *sd(dry_datA$DOY))
 dry_datA$periods=as.factor(dry_datA$period)
 
-dry1=dry_datA%>%filter(Plot=="Dry1")
-
-s1=lme4::glmer(value~ DOYs+ poly(DOYs, 2)+ years * periods + years*DOYs +DOYs*periods+ (1|Plot), family = "binomial", data=dry_datA)
+s1=lme4::glmer(value~ DOYs+ poly(DOYs, 2) + years + periods +
+              DOYs*years+
+              years*periods+
+              DOYs*periods +
+              poly(DOYs, 2)* periods+
+              poly(DOYs, 2)* years+
+              DOYs*years*periods+
+              poly(DOYs, 2)*years*periods+
+               (1|Plot),
+               family = "binomial",data=dry_datA)
 
 summary(s1)
-anova(s1)
+AIC(s1)
 
 s1_preds=as.vector(predict(s1, type="response"))%>%cbind(dry_datA)
 colnames(s1_preds)[1]="preds"
 
-
+#marginalize over plots (to smooth out the liens in the ggplot)
 ggplot(s1_preds, aes(x=DOY, y=preds, col=period))+geom_line()+facet_wrap(~Plot)+
   theme_classic()+ggtitle("quadratic model")+
   geom_point(aes(x=DOY, y=value, col=period))
-
-ggplot(s1_preds, aes(x=DOY, y=value, col=period))+geom_point()+facet_wrap(~Plot)+
-  theme_classic()+ggtitle("raw")+ylim(0,1)+
-  geom_line(aes(x=DOY, y=preds, col=period))
