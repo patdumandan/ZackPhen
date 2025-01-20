@@ -89,15 +89,15 @@ s1_preds_sen=s1_preds%>%filter(period=="prop_sen")
 #marginalize over plots (to smooth out the liens in the ggplot)
 
 s1b=ggplot(s1_preds_bud, aes(x=DOY, y=preds, col=as.factor(year)))+geom_line()+
-  theme_classic()+ggtitle("Dry 1 (buds)")
+  theme_classic()+ggtitle("Dry 1 (buds)")+scale_color_viridis_d()
 # geom_point(aes(x=DOY, y=value, col=as.factor(year)))
 
 s1f=ggplot(s1_preds_flwr, aes(x=DOY, y=preds, col=as.factor(year)))+geom_line()+
-  theme_classic()+ggtitle("Dry 1 (flowers)")
+  theme_classic()+ggtitle("Dry 1 (flowers)")+scale_color_viridis_d()
 #  geom_point(aes(x=DOY, y=value, col=as.factor(year)))
 
 s1s=ggplot(s1_preds_sen, aes(x=DOY, y=preds, col=as.factor(year)))+geom_line()+
-  theme_classic()+ggtitle("Dry 1 (senescent)")
+  theme_classic()+ggtitle("Dry 1 (senescent)")+scale_color_viridis_d()
 # geom_point(aes(x=DOY, y=value, col=as.factor(year)))
 
 #Dryas 2####
@@ -126,15 +126,15 @@ s2_preds_sen=s2_preds%>%filter(period=="prop_sen")
 #marginalize over plots (to smooth out the liens in the ggplot)
 
 s2b=ggplot(s2_preds_bud, aes(x=DOY, y=preds, col=as.factor(year)))+geom_line()+
-  theme_classic()+ggtitle("Dry 2 (buds)")
+  theme_classic()+ggtitle("Dry 2 (buds)")+scale_color_viridis_d()
 # geom_point(aes(x=DOY, y=value, col=as.factor(year)))
 
 s2f=ggplot(s2_preds_flwr, aes(x=DOY, y=preds, col=as.factor(year)))+geom_line()+
-  theme_classic()+ggtitle("Dry 2 (flowers)")
+  theme_classic()+ggtitle("Dry 2 (flowers)")+scale_color_viridis_d()
 #  geom_point(aes(x=DOY, y=value, col=as.factor(year)))
 
 s2s=ggplot(s1_preds_sen, aes(x=DOY, y=preds, col=as.factor(year)))+geom_line()+
-  theme_classic()+ggtitle("Dry 2 (senescent)")
+  theme_classic()+ggtitle("Dry 2 (senescent)")+scale_color_viridis_d()
 # geom_point(aes(x=DOY, y=value, col=as.factor(year)))
 
 #Dryas 3####
@@ -164,15 +164,15 @@ s3_preds_sen=s3_preds%>%filter(period=="prop_sen")
 #marginalize over plots (to smooth out the liens in the ggplot)
 
 s3b=ggplot(s3_preds_bud, aes(x=DOY, y=preds, col=as.factor(year)))+geom_line()+
-  theme_classic()+ggtitle("Dry 3 (buds)")
+  theme_classic()+ggtitle("Dry 3 (buds)")+scale_color_viridis_d()
 # geom_point(aes(x=DOY, y=value, col=as.factor(year)))
 
 s3f=ggplot(s3_preds_flwr, aes(x=DOY, y=preds, col=as.factor(year)))+geom_line()+
-  theme_classic()+ggtitle("Dry 3 (flowers)")
+  theme_classic()+ggtitle("Dry 3 (flowers)")+scale_color_viridis_d()
 #  geom_point(aes(x=DOY, y=value, col=as.factor(year)))
 
 s3s=ggplot(s3_preds_sen, aes(x=DOY, y=preds, col=as.factor(year)))+geom_line()+
-  theme_classic()+ggtitle("Dry 3 (senescent)")
+  theme_classic()+ggtitle("Dry 3 (senescent)")+scale_color_viridis_d()
 # geom_point(aes(x=DOY, y=value, col=as.factor(year)))
 
 #Dryas 4####
@@ -202,15 +202,15 @@ s4_preds_sen=s4_preds%>%filter(period=="prop_sen")
 #marginalize over plots (to smooth out the liens in the ggplot)
 
 s4b=ggplot(s4_preds_bud, aes(x=DOY, y=preds, col=as.factor(year)))+geom_line()+
-  theme_classic()+ggtitle("Dry 4 (buds)")
+  theme_classic()+ggtitle("Dry 4 (buds)")+scale_color_viridis_d()
 # geom_point(aes(x=DOY, y=value, col=as.factor(year)))
 
 s4f=ggplot(s4_preds_flwr, aes(x=DOY, y=preds, col=as.factor(year)))+geom_line()+
-  theme_classic()+ggtitle("Dry 4 (flowers)")
+  theme_classic()+ggtitle("Dry 4 (flowers)")+scale_color_viridis_d()
 #  geom_point(aes(x=DOY, y=value, col=as.factor(year)))
 
 s4s=ggplot(s4_preds_sen, aes(x=DOY, y=preds, col=as.factor(year)))+geom_line()+
-  theme_classic()+ggtitle("Dry 4 (senescent)")
+  theme_classic()+ggtitle("Dry 4 (senescent)")+scale_color_viridis_d()
 # geom_point(aes(x=DOY, y=value, col=as.factor(year)))
 
 #Dryas 5####
@@ -240,15 +240,15 @@ s5_preds_sen=s5_preds%>%filter(period=="prop_sen")
 #marginalize over plots (to smooth out the liens in the ggplot)
 
 s5b=ggplot(s5_preds_bud, aes(x=DOY, y=preds, col=as.factor(year)))+geom_line()+
-  theme_classic()+ggtitle("Dry 5 (buds)")
+  theme_classic()+ggtitle("Dry 5 (buds)")+scale_color_viridis_d()
 # geom_point(aes(x=DOY, y=value, col=as.factor(year)))
 
 s5f=ggplot(s5_preds_flwr, aes(x=DOY, y=preds, col=as.factor(year)))+geom_line()+
-  theme_classic()+ggtitle("Dry 5 (flowers)")
+  theme_classic()+ggtitle("Dry 5 (flowers)")+scale_color_viridis_d()
 #  geom_point(aes(x=DOY, y=value, col=as.factor(year)))
 
 s5s=ggplot(s5_preds_sen, aes(x=DOY, y=preds, col=as.factor(year)))+geom_line()+
-  theme_classic()+ggtitle("Dry 5 (senescent)")
+  theme_classic()+ggtitle("Dry 5 (senescent)")+scale_color_viridis_d()
 # geom_point(aes(x=DOY, y=value, col=as.factor(year)))
 
 #Dryas 6####
@@ -278,15 +278,15 @@ s6_preds_sen=s6_preds%>%filter(period=="prop_sen")
 #marginalize over plots (to smooth out the liens in the ggplot)
 
 s6b=ggplot(s6_preds_bud, aes(x=DOY, y=preds, col=as.factor(year)))+geom_line()+
-  theme_classic()+ggtitle("Dry 6 (buds)")
+  theme_classic()+ggtitle("Dry 6 (buds)")+scale_color_viridis_d()
 # geom_point(aes(x=DOY, y=value, col=as.factor(year)))
 
 s6f=ggplot(s6_preds_flwr, aes(x=DOY, y=preds, col=as.factor(year)))+geom_line()+
-  theme_classic()+ggtitle("Dry 6 (flowers)")
+  theme_classic()+ggtitle("Dry 6 (flowers)")+scale_color_viridis_d()
 #  geom_point(aes(x=DOY, y=value, col=as.factor(year)))
 
 s6s=ggplot(s6_preds_sen, aes(x=DOY, y=preds, col=as.factor(year)))+geom_line()+
-  theme_classic()+ggtitle("Dry 6 (senescent)")
+  theme_classic()+ggtitle("Dry 6 (senescent)")+scale_color_viridis_d()
 # geom_point(aes(x=DOY, y=value, col=as.factor(year)))
 
 require(ggpubr)
