@@ -7,15 +7,22 @@ require(tidyr)
 require(reshape2)
 require(readr)
 
-arth_raw_dat=read.table("G:\\My Drive\\SLU\\project\\GEM-datasets\\Arthropod emergence_10.17897_V285-Z265\\Arthropod emergence_10.17897_V285-Z265_data.txt",
+arth_raw_dat=read.table("L:\\My Drive\\SLU\\phenology-project\\GEM-datasets\\Arthropod emergence_10.17897_V285-Z265\\Arthropod emergence_10.17897_V285-Z265_data.txt",
                       sep="\t", header=T)
+
+#date-time manipulation
 
 colnames(arth_raw_dat)[1] <- "Date"
 colnames(arth_raw_dat)[2] <- "Time"
-colnames(arth_raw_dat)[colnames(arth_raw_dat) %in% c("A", "B", "C", "D", "E", "F", "G", "H")] <- c("Plot_A", "Plot_B", "Plot_C", "Plot_D", "Plot_E", "Plot_F", "Plot_G", "Plot_H")
-arth_raw_dat$Date <- as.Date(arth_raw_dat$Date, tz="GMT")
+arth_raw_dat$Date <- as.Date(arth_raw_dat$Date, "%Y-%m-%d")
+arth_raw_dat=arth_raw_dat%>%
+  mutate(Year=year(Date), Month=month(Date), Day=day(Date))%>%
+  mutate(across(18:25, as.integer))%>%
+  mutate(DOY=yday(Date))
 
-#(C): Replace -9999 or -999 with NA:
+colnames(arth_raw_dat)[colnames(arth_raw_dat) %in% c("A", "B", "C", "D", "E", "F", "G", "H")] <- c("Plot_A", "Plot_B", "Plot_C", "Plot_D", "Plot_E", "Plot_F", "Plot_G", "Plot_H")
+
+#Replace -9999 or -999 with NA:
 arth_raw_dat[arth_raw_dat==-9999] <- NA
 arth_raw_dat[arth_raw_dat==-999] <- NA
 
@@ -26,11 +33,6 @@ arth_raw_dat[arth_raw_dat==-999] <- NA
 arth_raw_dat=arth_raw_dat%>%
   mutate(Family=if_else(Family=="Gracilariidae", "Gracillariidae", Family),
         Species= if_else(Species=="Arigades franklinii", "Arigades glandon", Species))
-
-arth_raw_dat=arth_raw_dat%>%
-  mutate(Year=year(Date), Month=month(Date), Day=day(Date))%>%
-  mutate(across(18:25, as.integer))%>%
-  mutate(DOY=yday(Date))
 
 #creating a sampling unit ID
 arth_raw_dat$UnitID <- paste0(arth_raw_dat$Plot.ID,"_",arth_raw_dat$Year, "_", arth_raw_dat$DOY)
@@ -59,6 +61,7 @@ arth_raw_dat[which(arth_raw_dat$Family=="Mycetophilidae"),"HoyeTaxon"] <- "Sciar
 
 #+bumblebees for controlling mites
 arth_raw_dat[which(arth_raw_dat$Genus=="Bombus"),"HoyeTaxon"] <- "Bombus"
+
 # mark lycosid egg sacks for removal
 arth_raw_dat[which(arth_raw_dat$Species=="Lycosidae egg sac"),"HoyeTaxon"] <- "Other"
 
@@ -69,6 +72,8 @@ arth_raw_data=arth_raw_dat%>%filter(Month%in%c(6:8), !HoyeTaxon=="Other")
 arth_raw_data$CatchID <- paste0(arth_raw_data$Plot.ID,"_",arth_raw_data$Year,"_",arth_raw_data$DOY,"_",arth_raw_data$HoyeTaxon)
 #NAs to zeros as some rows have NA for catches and trap days and zero trapdays is the same, but doesn't phase the code
 arth_raw_data[is.na(arth_raw_data)] <-0
+arth_raw_data=arth_raw_data%>%mutate_at(c(23:30), ~replace_na(.,0),
+                                        c(10:17), ~replace_na(.,0))
 
 #We sum the catches in each trap for each taxa in each trapping-period
 Counts <- aggregate(cbind(Plot_A,Plot_B,Plot_C,Plot_D,Plot_E,Plot_F,Plot_G,Plot_H)~CatchID,drop=FALSE, data=arth_raw_data,  FUN = sum, na.action = na.omit)
@@ -80,6 +85,10 @@ newdat=left_join(Counts, TrapDays, by="CatchID")
 arth_raw_data<- cbind(data.frame(do.call("rbind", strsplit(as.character(newdat$CatchID), "_", fixed = TRUE))), newdat)
 colnames(arth_raw_data)[1:4] <- c("Plot.ID", "Year", "DOY", "HoyeTaxon")
 arth_raw_data$UnitID <- paste0(arth_raw_data$Plot.ID,"_",arth_raw_data$Year, "_", arth_raw_data$DOY)
+
+###    Lycosids and Mites ----
+# Correcting for clusters of mites carried by bubmlebees and
+# baby lycosids carried by their mothers
 
 arth_raw_data<-mutate(arth_raw_data,TrapDays = rowSums(across(Days.A:Days.H), na.rm = T))
 arth_raw_data<-mutate(arth_raw_data,TotalCatch1 = rowSums(across(Plot_A:Plot_H), na.rm = T))
@@ -160,8 +169,6 @@ for(i in Samples){
   Mites2 <- rbind(Mites2,am)
 }
 
-tail(Mites2)
-
 Mites2<-mutate(Mites2,TrapDays = rowSums(across(Days.A:Days.H), na.rm = T))
 Mites2<-mutate(Mites2,TotalCatch1 = rowSums(across(Plot_A:Plot_H), na.rm = T))
 Mites2<-mutate(Mites2,CatchPerTrapDay = (TotalCatch1/TrapDays))
@@ -178,60 +185,19 @@ arth_raw_data2 <- rbind(arth_raw_data2,Mites2)
 arth_raw_data2 <- rbind(arth_raw_data2,Lycosids2)
 
 arth_raw_data <- arth_raw_data2
+#write.csv(arth_raw_data, "arth_raw_dat.csv")
 
-### Calculate CatchPerTrapDay per trap per census per year ####
-arth_raw_dat_full<- plyr::ddply(arth_raw_data2, c("Year","Plot.ID","DOY","HoyeTaxon"), summarise,
-                     TotCatchTrapDay = sum(CatchPerTrapDay),
-                     TotCatchInd=sum(TotalCatch1),
-                     TotalTrapDays=mean(TrapDays))#summarize per census round per year
-
-arth_raw_dat_full$UniqueID <- as.factor(interaction(arth_raw_dat_full$Year, arth_raw_dat_full$Plot.ID,sep="_"))
-arth_raw_dat_full$FULL_name <- as.factor(interaction(arth_raw_dat_full$UniqueID, arth_raw_dat_full$HoyeTaxon,sep="_"))
-
-
-arth_raw_dat_full$CumSum2<-ave(arth_raw_dat_full$TotCatchTrapDay,arth_raw_dat_full$FULL_name,FUN=cumsum)
-arth_raw_dat_full$Total<-ave(arth_raw_dat_full$TotCatchTrapDay,arth_raw_dat_full$FULL_name,FUN=sum)
-arth_raw_dat_full<-mutate(arth_raw_dat_full,CumFreq = 100*(CumSum2/Total))
-
-arth_raw_dat_full <- arth_raw_dat_full[!is.na(arth_raw_dat_full$CumFreq),]
-
-ARTPhenologyPlot<-ggplot(arth_raw_dat_full[arth_raw_dat_full$Year==2004 & arth_raw_dat_full$Plot.ID=="Art2",], aes(DOY, CumFreq), color="red") +
-  #geom_abline(slope=0, intercept=50, linetype=2, color="gray60")+
-  geom_line(size=1.3)+
-  #geom_line(aes(DOY, PercentBuds), color="blue",size=1.3)+
-  #geom_line(aes(DOY, PercentSenescent), color="brown",size=1.3)+
-  #geom_smooth(method="lm", se=FALSE)+
-  theme_bw()+
-  #geom_abline(slope=1, intercept=0, linetype=1, color="gray60")+
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
-        axis.line = element_line(colour = "black"))
-
-ARTPhenologyPlot
-
-#10% EMERGENCE
-arth_dat_prop10=arth_raw_dat_full%>%
-  group_by(Year, FULL_name)%>%
-  mutate(cum_tot=cumsum(TotCatchTrapDay),
-         cum_pt=cum_tot/Total)
-
-#choose last date when approximately 10% emergence was reached
-arth_grp1=arth_dat_prop10%>%
-  group_by(Year, Plot.ID, HoyeTaxon, FULL_name)%>%
-  mutate(PD_10=if_else(cum_pt<=0.1,"1", "2"))%>%
-  filter(PD_10==1)%>%slice_tail(n=1)%>%rename(DOY_1=DOY)%>%
-  select(Year, Plot.ID, DOY_1, HoyeTaxon, FULL_name)
-
-arth_grp1$DOY_1=as.integer(arth_grp1$DOY_1)
-
-#choose first date when approximately 10% emergence was reached
-arth_grp2=arth_dat_prop10%>%
-    group_by(Year, Plot.ID, HoyeTaxon, FULL_name)%>%
-  mutate(PD_10=if_else(cum_pt<=0.1,"1", "2"))%>%
-    filter(PD_10==2)%>%slice_head(n=1)%>%rename(DOY_2=DOY)%>%
-  select(Year, Plot.ID, DOY_2, HoyeTaxon, FULL_name)
-
-arth_grp2$DOY_2=as.integer(arth_grp2$DOY_2)
-
-#approximate timing, date between the first and last date when >/< 10% emergence was reached
-approx_dat=left_join(arth_grp1, arth_grp2)%>%mutate(interp_DOY=median(c(DOY_1,DOY_2)))
-
+# ### Calculate CatchPerTrapDay per trap per census per year ####
+# arth_raw_dat_full<- plyr::ddply(arth_raw_data, c("Year","Plot.ID","DOY","HoyeTaxon"), summarise,
+#                      TotCatchTrapDay = sum(CatchPerTrapDay),
+#                      TotCatchInd=sum(TotalCatch1),
+#                      TotalTrapDays=mean(TrapDays))#summarize per census round per year
+#
+# arth_raw_dat_full$UniqueID <- as.factor(interaction(arth_raw_dat_full$Year, arth_raw_dat_full$Plot.ID,sep="_"))
+# arth_raw_dat_full$FULL_name <- as.factor(interaction(arth_raw_dat_full$UniqueID, arth_raw_dat_full$HoyeTaxon,sep="_"))
+#
+# arth_raw_dat_full$CumSum2<-ave(arth_raw_dat_full$TotCatchTrapDay,arth_raw_dat_full$FULL_name,FUN=cumsum)
+# arth_raw_dat_full$Total<-ave(arth_raw_dat_full$TotCatchTrapDay,arth_raw_dat_full$FULL_name,FUN=sum)
+# arth_raw_dat_full<-mutate(arth_raw_dat_full,CumFreq = 100*(CumSum2/Total))
+#
+# arth_raw_dat_full <- arth_raw_dat_full[!is.na(arth_raw_dat_full$CumFreq),]
