@@ -56,24 +56,24 @@ ggplot(dry_datA, aes(x=DOY, y=tot_flwr, col=year))+geom_point()+facet_wrap(~Plot
 
 #polynomial term for DOY
 dry_datA$DOYsq=dry_datA$DOY^2
-dry_datA$doys_sq11=poly(dry_datA$DOY,2, raw = T)[,2]
-dry_datA$doys_sq=poly(dry_datA$DOY,2, raw = T)
+#dry_datA$doys_sq11=poly(dry_datA$DOY,2, raw = T)[,2]
+#dry_datA$doys_sq=poly(dry_datA$DOY,2, raw = T)
 
 #standardize variables
 dry_datA$years = (dry_datA$year - mean(dry_datA$year))/sd(dry_datA$year)
 dry_datA$DOYs = (dry_datA$DOY - mean(dry_datA$DOY))/sd(dry_datA$DOY)
-dry_datA$doys_sqs1 = (dry_datA$doys_sq[,1] - mean(dry_datA$doys_sq[,1]))/sd(dry_datA$doys_sq[,1])
-dry_datA$doys_sqs2 = (dry_datA$doys_sq[,2] - mean(dry_datA$doys_sq[,2]))/sd(dry_datA$doys_sq[,2])
-dry_datA$doys_sqs11 = (dry_datA$doys_sq11 - mean(dry_datA$doys_sq11))/sd(dry_datA$doys_sq11)
 dry_datA$DOYsqs = (dry_datA$DOYsq - mean(dry_datA$DOYsq))/sd(dry_datA$DOYsq)
+#dry_datA$doys_sqs1 = (dry_datA$doys_sq[,1] - mean(dry_datA$doys_sq[,1]))/sd(dry_datA$doys_sq[,1])
+#dry_datA$doys_sqs2 = (dry_datA$doys_sq[,2] - mean(dry_datA$doys_sq[,2]))/sd(dry_datA$doys_sq[,2])
+#dry_datA$doys_sqs11 = (dry_datA$doys_sq11 - mean(dry_datA$doys_sq11))/sd(dry_datA$doys_sq11)
 
 #Data Analysis####
 
 #Dryas
-s1=glmer(cbind(tot_flwr, tot_NF)~  doys_sqs1+ doys_sqs2 + years + # base linear terms
+s1=glmer(cbind(tot_flwr, tot_NF)~  DOYs+ DOYsqs + years + # base linear terms
        # timing and long-term trend interaction
-         doys_sqs1 * years+
-         doys_sqs2 * years+
+         DOYs * years+
+         DOYsqs * years+
            (1 |Plot),#ranef
          family = "binomial", data=dry_datA)
 
@@ -102,11 +102,11 @@ yrs=1996:2024
 coefs=fixef(s1)
 
 b0 <- coefs['(Intercept)']
-b1 <- coefs['doys_sqs1']
-b2 <- coefs['doys_sqs2']
+b1 <- coefs['DOYs']
+b2 <- coefs['DOYsqs']
 b3 <- coefs['years']
-b4 <- coefs['doys_sqs1:years']
-b5 <- coefs['doys_sqs2:years']
+b4 <- coefs['DOYs:years']
+b5 <- coefs['DOYsqs:years']
 
 bt=b1+b4*yrs
 ct= b2+b5*yrs
