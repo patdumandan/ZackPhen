@@ -1,8 +1,11 @@
-#plants
+#plant analysis
 require(tidyr)
 require(dplyr)
 require(lubridate)
+require(ggplot2)
+require(lme4)
 
+#Data Wrangling####
 dry_dat=read.csv("L:\\My Drive\\SLU\\phenology-project\\ZackPhen\\data\\raw\\Dryas phenology_10.17897_JSQ7-6355_data.txt",
                  sep="\t", header=T)
 
@@ -12,7 +15,7 @@ dry_dat_raw=dry_dat%>%
   mutate(year=year(Date), month=month(Date), dia=day(Date), species="Dryas")%>%
   mutate(DOY=yday(Date))%>%
   select(-Field_remarks, -General_remarks, -Date, -Larvae, -Eaten)%>%
-  filter(!Plot%in%c("Dry7", "Dry8"))
+  filter(!Plot%in%c("Dry7", "Dry8"), !year<1996)
 
 dry_dat_raw[dry_dat_raw==-9999] <- NA
 dry_dat_raw[dry_dat_raw==-999] <- NA
@@ -23,276 +26,89 @@ dry_dat_grp=dry_dat_raw%>%
   group_by(Plot, year, DOY)%>%summarise(tot_bud=sum(Buds),
                                      tot_flwr=sum(Flowers),
                                      tot_sen=sum(Senescent),
-                                     tot_all=sum(tot_bud, tot_flwr, tot_sen))%>%
-  group_by(Plot, year)%>%mutate(tot_yr=sum(tot_all),
-                                tot_buds=sum(tot_bud),
-                                tot_flwrs=sum(tot_flwr),
-                                tot_sens=sum(tot_sen))%>%
-  group_by(Plot, year, DOY)%>%
-  mutate(prop_bud=tot_bud/tot_all,
-         prop_flwr=tot_flwr/tot_all,
-         prop_sen=tot_sen/tot_all,
-         cumprop_10=(tot_bud)/tot_yr,
-         cumprop_50=(tot_flwr)/tot_yr,
-         cumprop_90=(tot_sen)/tot_yr,
-         props_10=tot_bud/tot_buds,
-         props_50=tot_flwr/tot_flwrs,
-         props_90=tot_sen/tot_sens)
+                                     tot_NF=sum(tot_bud+tot_sen),
+                                     tot_all=sum(tot_bud, tot_flwr, tot_sen))
+
+  # group_by(Plot, year)%>%mutate(tot_yr=sum(tot_all),
+  #                               tot_buds=sum(tot_bud),
+  #                               tot_flwrs=sum(tot_flwr),
+  #                               tot_sens=sum(tot_sen))%>%
+  # group_by(Plot, year, DOY)%>%
+  # mutate(prop_bud=tot_bud/tot_all,
+  #        prop_flwr=tot_flwr/tot_all,
+  #        prop_sen=tot_sen/tot_all,
+  #        cumprop_10=(tot_bud)/tot_yr,
+  #        cumprop_50=(tot_flwr)/tot_yr,
+  #        cumprop_90=(tot_sen)/tot_yr,
+  #        props_10=tot_bud/tot_buds,
+  #        props_50=tot_flwr/tot_flwrs,
+  #        props_90=tot_sen/tot_sens)
 
 dry_datA=dry_dat_grp%>%
-  select(,-c(15:20))%>%
-  pivot_longer(cols=c(12:14),names_to="period")%>%
+  #select(,-c(15:20))%>%
   replace_na(list(value=0))
 
-require(ggplot2)
+#Data Viz####
+ggplot(dry_datA, aes(x=DOY, y=tot_flwr, col=year))+geom_point()+facet_wrap(~Plot)+
+  theme_classic()+stat_smooth(method="gam", col="black")+ggtitle("Dryas")
 
-ggplot(dry_datA, aes(x=DOY, y=value, col=period))+geom_point()+facet_wrap(~Plot)+
-  theme_classic()+stat_smooth(method="gam")+ggtitle("A")
+#Data Analysis###
 
-#for scaling (look into 1 instead of 2 SDs)
-dry_datA$value[dry_datA$value==-NaN] <- 0
-dry_datA$value[dry_datA$value==-NA] <- 0
+#polynomial term for DOY
+dry_datA$DOYsq=dry_datA$DOY^2
+dry_datA$doys_sq11=poly(dry_datA$DOY,2, raw = T)[,2]
+dry_datA$doys_sq=poly(dry_datA$DOY,2, raw = T)
 
-min(dry_datA$value)
-max(dry_datA$value, na.rm = T)
+#standardize variables
+dry_datA$years = (dry_datA$year - mean(dry_datA$year))/sd(dry_datA$year)
+dry_datA$DOYs = (dry_datA$DOY - mean(dry_datA$DOY))/sd(dry_datA$DOY)
+dry_datA$doys_sqs1 = (dry_datA$doys_sq[,1] - mean(dry_datA$doys_sq[,1]))/sd(dry_datA$doys_sq[,1])
+dry_datA$doys_sqs2 = (dry_datA$doys_sq[,2] - mean(dry_datA$doys_sq[,2]))/sd(dry_datA$doys_sq[,2])
+dry_datA$doys_sqs11 = (dry_datA$doys_sq11 - mean(dry_datA$doys_sq11))/sd(dry_datA$doys_sq11)
+dry_datA$DOYsqs = (dry_datA$DOYsq - mean(dry_datA$DOYsq))/sd(dry_datA$DOYsq)
 
-#for scaling (look into 1 instead of 2 SDs)
-dry_datA$years = (dry_datA$year - mean(dry_datA$year))/(1 *sd(dry_datA$year))
-dry_datA$DOYs = (dry_datA$DOY - mean(dry_datA$DOY))/(1 *sd(dry_datA$DOY))
-dry_datA$periods=as.factor(dry_datA$period)
+#Data Analysis####
 
-require(lme4)
+#Dryas
+s1=glmer(cbind(tot_flwr, tot_NF)~  doys_sqs1+ doys_sqs2 + years + # base linear terms
+       # timing and long-term trend interaction
+         doys_sqs1 * years+
+         doys_sqs2 * years+
+           (1 |Plot),#ranef
+         family = "binomial", data=dry_datA)
 
-#Dryas 1####
-dry_datA1=dry_datA%>%filter(Plot=="Dry1")
+#plot predictions
+s1_preds=as.vector(predict(s1, type="response"))%>%cbind(dry_datA)
 
-s1=glm(value~ DOYs+ poly(DOYs,2) + years + periods + # base linear terms
-         DOYs*years + # timing and long-term trend interaction
-         DOYs*periods + # timing and life stage interaction
-         years*periods + #long-term trend and life stage interaction
-         poly(DOYs, 2)* years + #curve and long-term trend interaction
-         poly(DOYs, 2) * periods + #curve and life stage interaction
-         DOYs*years*periods + #timing, long-term trend and life stage interaction
-         poly(DOYs, 2)*years*periods, #curve, long-term trend, and life-stage interaction
-       family = "binomial", data=dry_datA1, weights=tot_all)
-
-summary(s1)
-AIC(s1)
-
-s1_preds=as.vector(predict(s1, type="response"))%>%cbind(dry_datA1)
 colnames(s1_preds)[1]="preds"
 
-s1_preds_bud=s1_preds%>%filter(period=="prop_bud")
-s1_preds_flwr=s1_preds%>%filter(period=="prop_flwr")
-s1_preds_sen=s1_preds%>%filter(period=="prop_sen")
+ggplot(s1_preds, aes(x=DOY, y=preds, col=as.factor(year)))+geom_line()+
+  ylab("predicted proportions")+xlab("Day of Year (DOY)")+
+  theme_classic()+ggtitle("Dryas (flowers)")+scale_color_viridis_d()+facet_wrap(~Plot)
+#  geom_point(aes(x=DOY, y=prop_flwr, col=as.factor(year)))+
+ #scale_y_log10()
 
-#marginalize over plots (to smooth out the liens in the ggplot)
+#determine change in peak dates using derivatives
 
-s1b=ggplot(s1_preds_bud, aes(x=DOY, y=preds, col=as.factor(year)))+geom_line()+
-  theme_classic()+ggtitle("Dry 1 (buds)")+scale_color_viridis_d()
-# geom_point(aes(x=DOY, y=value, col=as.factor(year)))
+#given y=ax^2+bx+c, we can assume that change in (a) over years can
+#tell us if the curve is widening or narrowing,
+#and the point where the 2nd derivative (2ax+b)=0 is the peak
 
-s1f=ggplot(s1_preds_flwr, aes(x=DOY, y=preds, col=as.factor(year)))+geom_line()+
-  theme_classic()+ggtitle("Dry 1 (flowers)")+scale_color_viridis_d()
-#  geom_point(aes(x=DOY, y=value, col=as.factor(year)))
+#to get the 2nd derivative wrt to DOY, we assume that
+#ax^2=DOY^2(B1)+DOY^2:year(B4)*year, bx=DOY(B2)+DOY:year(B5)*year
 
-s1s=ggplot(s1_preds_sen, aes(x=DOY, y=preds, col=as.factor(year)))+geom_line()+
-  theme_classic()+ggtitle("Dry 1 (senescent)")+scale_color_viridis_d()
-# geom_point(aes(x=DOY, y=value, col=as.factor(year)))
+yrs=1996:2024
 
-#Dryas 2####
-dry_datA2=dry_datA%>%filter(Plot=="Dry2")
+coefs=fixef(s1)
 
-s2=glm(value~ DOYs+ poly(DOYs,2) + years + periods + # base linear terms
-         DOYs*years + # timing and long-term trend interaction
-         DOYs*periods + # timing and life stage interaction
-         years*periods + #long-term trend and life stage interaction
-         poly(DOYs, 2)* years + #curve and long-term trend interaction
-         poly(DOYs, 2) * periods + #curve and life stage interaction
-         DOYs*years*periods + #timing, long-term trend and life stage interaction
-         poly(DOYs, 2)*years*periods, #curve, long-term trend, and life-stage interaction
-       family = "binomial", data=dry_datA2, weights=tot_all)
+b0 <- coefs['(Intercept)']
+b1 <- coefs['doys_sqs1']
+b2 <- coefs['doys_sqs2']
+b3 <- coefs['years']
+b4 <- coefs['doys_sqs1:years']
+b5 <- coefs['doys_sqs2:years']
 
-summary(s2)
-AIC(s2)
-
-s2_preds=as.vector(predict(s2, type="response"))%>%cbind(dry_datA2)
-colnames(s2_preds)[1]="preds"
-
-s2_preds_bud=s2_preds%>%filter(period=="prop_bud")
-s2_preds_flwr=s2_preds%>%filter(period=="prop_flwr")
-s2_preds_sen=s2_preds%>%filter(period=="prop_sen")
-
-#marginalize over plots (to smooth out the liens in the ggplot)
-
-s2b=ggplot(s2_preds_bud, aes(x=DOY, y=preds, col=as.factor(year)))+geom_line()+
-  theme_classic()+ggtitle("Dry 2 (buds)")+scale_color_viridis_d()
-# geom_point(aes(x=DOY, y=value, col=as.factor(year)))
-
-s2f=ggplot(s2_preds_flwr, aes(x=DOY, y=preds, col=as.factor(year)))+geom_line()+
-  theme_classic()+ggtitle("Dry 2 (flowers)")+scale_color_viridis_d()
-#  geom_point(aes(x=DOY, y=value, col=as.factor(year)))
-
-s2s=ggplot(s1_preds_sen, aes(x=DOY, y=preds, col=as.factor(year)))+geom_line()+
-  theme_classic()+ggtitle("Dry 2 (senescent)")+scale_color_viridis_d()
-# geom_point(aes(x=DOY, y=value, col=as.factor(year)))
-
-#Dryas 3####
-
-dry_datA3=dry_datA%>%filter(Plot=="Dry3")
-
-s3=glm(value~ DOYs+ poly(DOYs,2) + years + periods + # base linear terms
-         DOYs*years + # timing and long-term trend interaction
-         DOYs*periods + # timing and life stage interaction
-         years*periods + #long-term trend and life stage interaction
-         poly(DOYs, 2)* years + #curve and long-term trend interaction
-         poly(DOYs, 2) * periods + #curve and life stage interaction
-         DOYs*years*periods + #timing, long-term trend and life stage interaction
-         poly(DOYs, 2)*years*periods, #curve, long-term trend, and life-stage interaction
-       family = "binomial", data=dry_datA3, weights=tot_all)
-
-summary(s3)
-AIC(s3)
-
-s3_preds=as.vector(predict(s3, type="response"))%>%cbind(dry_datA3)
-colnames(s3_preds)[1]="preds"
-
-s3_preds_bud=s3_preds%>%filter(period=="prop_bud")
-s3_preds_flwr=s3_preds%>%filter(period=="prop_flwr")
-s3_preds_sen=s3_preds%>%filter(period=="prop_sen")
-
-#marginalize over plots (to smooth out the liens in the ggplot)
-
-s3b=ggplot(s3_preds_bud, aes(x=DOY, y=preds, col=as.factor(year)))+geom_line()+
-  theme_classic()+ggtitle("Dry 3 (buds)")+scale_color_viridis_d()
-# geom_point(aes(x=DOY, y=value, col=as.factor(year)))
-
-s3f=ggplot(s3_preds_flwr, aes(x=DOY, y=preds, col=as.factor(year)))+geom_line()+
-  theme_classic()+ggtitle("Dry 3 (flowers)")+scale_color_viridis_d()
-#  geom_point(aes(x=DOY, y=value, col=as.factor(year)))
-
-s3s=ggplot(s3_preds_sen, aes(x=DOY, y=preds, col=as.factor(year)))+geom_line()+
-  theme_classic()+ggtitle("Dry 3 (senescent)")+scale_color_viridis_d()
-# geom_point(aes(x=DOY, y=value, col=as.factor(year)))
-
-#Dryas 4####
-
-dry_datA4=dry_datA%>%filter(Plot=="Dry4")
-
-s4=glm(value~ DOYs+ poly(DOYs,2) + years + periods + # base linear terms
-         DOYs*years + # timing and long-term trend interaction
-         DOYs*periods + # timing and life stage interaction
-         years*periods + #long-term trend and life stage interaction
-         poly(DOYs, 2)* years + #curve and long-term trend interaction
-         poly(DOYs, 2) * periods + #curve and life stage interaction
-         DOYs*years*periods + #timing, long-term trend and life stage interaction
-         poly(DOYs, 2)*years*periods, #curve, long-term trend, and life-stage interaction
-       family = "binomial", data=dry_datA4, weights=tot_all)
-
-summary(s4)
-AIC(s4)
-
-s4_preds=as.vector(predict(s4, type="response"))%>%cbind(dry_datA4)
-colnames(s4_preds)[1]="preds"
-
-s4_preds_bud=s4_preds%>%filter(period=="prop_bud")
-s4_preds_flwr=s4_preds%>%filter(period=="prop_flwr")
-s4_preds_sen=s4_preds%>%filter(period=="prop_sen")
-
-#marginalize over plots (to smooth out the liens in the ggplot)
-
-s4b=ggplot(s4_preds_bud, aes(x=DOY, y=preds, col=as.factor(year)))+geom_line()+
-  theme_classic()+ggtitle("Dry 4 (buds)")+scale_color_viridis_d()
-# geom_point(aes(x=DOY, y=value, col=as.factor(year)))
-
-s4f=ggplot(s4_preds_flwr, aes(x=DOY, y=preds, col=as.factor(year)))+geom_line()+
-  theme_classic()+ggtitle("Dry 4 (flowers)")+scale_color_viridis_d()
-#  geom_point(aes(x=DOY, y=value, col=as.factor(year)))
-
-s4s=ggplot(s4_preds_sen, aes(x=DOY, y=preds, col=as.factor(year)))+geom_line()+
-  theme_classic()+ggtitle("Dry 4 (senescent)")+scale_color_viridis_d()
-# geom_point(aes(x=DOY, y=value, col=as.factor(year)))
-
-#Dryas 5####
-
-dry_datA5=dry_datA%>%filter(Plot=="Dry5")
-
-s5=glm(value~ DOYs+ poly(DOYs,2) + years + periods + # base linear terms
-         DOYs*years + # timing and long-term trend interaction
-         DOYs*periods + # timing and life stage interaction
-         years*periods + #long-term trend and life stage interaction
-         poly(DOYs, 2)* years + #curve and long-term trend interaction
-         poly(DOYs, 2) * periods + #curve and life stage interaction
-         DOYs*years*periods + #timing, long-term trend and life stage interaction
-         poly(DOYs, 2)*years*periods, #curve, long-term trend, and life-stage interaction
-       family = "binomial", data=dry_datA5, weights=tot_all)
-
-summary(s5)
-AIC(s5)
-
-s5_preds=as.vector(predict(s5, type="response"))%>%cbind(dry_datA5)
-colnames(s5_preds)[1]="preds"
-
-s5_preds_bud=s5_preds%>%filter(period=="prop_bud")
-s5_preds_flwr=s5_preds%>%filter(period=="prop_flwr")
-s5_preds_sen=s5_preds%>%filter(period=="prop_sen")
-
-#marginalize over plots (to smooth out the liens in the ggplot)
-
-s5b=ggplot(s5_preds_bud, aes(x=DOY, y=preds, col=as.factor(year)))+geom_line()+
-  theme_classic()+ggtitle("Dry 5 (buds)")+scale_color_viridis_d()
-# geom_point(aes(x=DOY, y=value, col=as.factor(year)))
-
-s5f=ggplot(s5_preds_flwr, aes(x=DOY, y=preds, col=as.factor(year)))+geom_line()+
-  theme_classic()+ggtitle("Dry 5 (flowers)")+scale_color_viridis_d()
-#  geom_point(aes(x=DOY, y=value, col=as.factor(year)))
-
-s5s=ggplot(s5_preds_sen, aes(x=DOY, y=preds, col=as.factor(year)))+geom_line()+
-  theme_classic()+ggtitle("Dry 5 (senescent)")+scale_color_viridis_d()
-# geom_point(aes(x=DOY, y=value, col=as.factor(year)))
-
-#Dryas 6####
-
-dry_datA6=dry_datA%>%filter(Plot=="Dry6")
-
-s6=glm(value~ DOYs+ poly(DOYs,2) + years + periods + # base linear terms
-         DOYs*years + # timing and long-term trend interaction
-         DOYs*periods + # timing and life stage interaction
-         years*periods + #long-term trend and life stage interaction
-         poly(DOYs, 2)* years + #curve and long-term trend interaction
-         poly(DOYs, 2) * periods + #curve and life stage interaction
-         DOYs*years*periods + #timing, long-term trend and life stage interaction
-         poly(DOYs, 2)*years*periods, #curve, long-term trend, and life-stage interaction
-       family = "binomial", data=dry_datA6, weights=tot_all)
-
-summary(s6)
-AIC(s6)
-
-s6_preds=as.vector(predict(s6, type="response"))%>%cbind(dry_datA6)
-colnames(s6_preds)[1]="preds"
-
-s6_preds_bud=s6_preds%>%filter(period=="prop_bud")
-s6_preds_flwr=s6_preds%>%filter(period=="prop_flwr")
-s6_preds_sen=s6_preds%>%filter(period=="prop_sen")
-
-#marginalize over plots (to smooth out the liens in the ggplot)
-
-s6b=ggplot(s6_preds_bud, aes(x=DOY, y=preds, col=as.factor(year)))+geom_line()+
-  theme_classic()+ggtitle("Dry 6 (buds)")+scale_color_viridis_d()
-# geom_point(aes(x=DOY, y=value, col=as.factor(year)))
-
-s6f=ggplot(s6_preds_flwr, aes(x=DOY, y=preds, col=as.factor(year)))+geom_line()+
-  theme_classic()+ggtitle("Dry 6 (flowers)")+scale_color_viridis_d()
-#  geom_point(aes(x=DOY, y=value, col=as.factor(year)))
-
-s6s=ggplot(s6_preds_sen, aes(x=DOY, y=preds, col=as.factor(year)))+geom_line()+
-  theme_classic()+ggtitle("Dry 6 (senescent)")+scale_color_viridis_d()
-# geom_point(aes(x=DOY, y=value, col=as.factor(year)))
-
-require(ggpubr)
-
-ggarrange(s1b, s1f, s1s,s2b, s2f, s2s,
-          s3b, s3f, s3s,s4b, s4f, s4s,
-          s5b, s5f, s5s,s6b, s6f, s6s,
-          ncol=3,
-          nrow=6, common.legend = T, legend="right")
+bt=b1+b4*yrs
+ct= b2+b5*yrs
+peak=bt/(2*ct)
+plot(peak~yrs)
