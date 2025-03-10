@@ -1,9 +1,14 @@
+#arthropod analysis
+
+#load packages
 require(dplyr)
 require(tidyr)
 require(lme4)
+require(ggplot2)
+require(ggpubr)
 
 #load cleana arthropod data
-arth_dat=read.csv("L:\\My Drive\\SLU\\phenology-project\\ZackPhen\\arth_raw_dat.csv", header=T)
+arth_dat=read.csv("https://raw.githubusercontent.com/patdumandan/ZackPhen/refs/heads/main/arth_raw_dat.csv", header=T)
 
 #inspect data crudely
 #plots per taxon
