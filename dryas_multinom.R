@@ -8,7 +8,7 @@ require(nnet)
 
 
 #Data Wrangling####
-dry_dat=read.csv("L:\\My Drive\\SLU\\phenology-project\\ZackPhen\\data\\raw\\Dryas phenology_10.17897_JSQ7-6355_data.txt",
+dry_dat=read.csv("https://raw.githubusercontent.com/patdumandan/ZackPhen/refs/heads/main/Dryas%20phenology_10.17897_JSQ7-6355/Dryas%20phenology_10.17897_JSQ7-6355_data.txt",
                  sep="\t", header=T)
 
 dry_dat$Date=as.POSIXct(dry_dat$Date, tz="GMT", format = "%Y-%m-%d")
@@ -24,18 +24,31 @@ dry_dat_raw[dry_dat_raw==-999] <- NA
 
 dry_dat_raw=dry_dat_raw%>%replace_na(list(Buds=0, Flowers=0, Senescent=0))
 
+#create data table for multinomial
+dry_dat_long=dry_dat_raw%>%replace_na(list(value=0))%>%
+  group_by(Plot, year, DOY)%>%summarise(tot_bud=sum(Buds),
+                                        tot_flwr=sum(Flowers),
+                                        tot_sen=sum(Senescent))%>%
+  pivot_longer(cols=4:6, names_to="stage")
+
+dryfreq=dry_dat_long$value
+
+dry_datB=as.data.frame(apply(dry_dat_long, 2,function(x)rep(x,dryfreq)),row.names=FALSE)
+dry_datB$stage=as.factor(dry_datB$stage)
+
+#for plotting later of actual vs predicted
+
 dry_dat_grp=dry_dat_raw%>%
   group_by(Plot, year, DOY)%>%summarise(tot_bud=sum(Buds),
                                         tot_flwr=sum(Flowers),
                                         tot_sen=sum(Senescent),
-                                        tot_NF=sum(tot_bud+tot_sen),
                                         tot_all=sum(tot_bud, tot_flwr, tot_sen))%>%
-group_by(Plot, year)%>%mutate(tot_yr=sum(tot_all),
+  group_by(Plot, year)%>%mutate(tot_yr=sum(tot_all),
                               tot_buds=sum(tot_bud),
                               tot_flwrs=sum(tot_flwr),
                               tot_sens=sum(tot_sen))%>%
-group_by(Plot, year, DOY)%>%
-mutate(prop_bud=tot_bud/tot_all,
+  group_by(Plot, year, DOY)%>%
+  mutate(prop_bud=tot_bud/tot_all,
        prop_flwr=tot_flwr/tot_all,
        prop_sen=tot_sen/tot_all,
        cumprop_10=(tot_bud)/tot_yr,
@@ -46,75 +59,65 @@ mutate(prop_bud=tot_bud/tot_all,
        props_90=tot_sen/tot_sens)%>%
   select(Plot, DOY, year, prop_bud, prop_flwr,prop_sen)%>%
   rename(tot_bud=prop_bud, tot_flwr=prop_flwr, tot_sen=prop_sen)%>%
-  pivot_longer(cols=c(tot_bud,tot_flwr, tot_sen), names_to="stage")
-
-#restructure data for multinomial model
-
-dry_dat_long=dry_dat_grp%>%
-  #select(,-c(15:20))%>%
-  replace_na(list(value=0))%>%
-  pivot_longer(cols=4:6, names_to="stage")
-
-dryfreq=dry_dat_long$value
-
-dry_datA=as.data.frame(apply(dry_dat_long, 2,function(x)rep(x,dryfreq)),row.names=FALSE)
-
-#Data Viz####
-#ggplot(dry_datA, aes(x=DOY, y=tot_flwr, col=year))+geom_point()+facet_wrap(~Plot)+
-# theme_classic()+stat_smooth(method="gam", col="black")+ggtitle("Dryas")
+  pivot_longer(cols=c(tot_bud,tot_flwr, tot_sen), names_to="stage")%>%
+  replace_na(list(value=0))
 
 #Data Analysis###
 
 #polynomial term for DOY
-dry_datA$DOY=as.integer(dry_datA$DOY)
-dry_datA$year=as.integer(dry_datA$year)
-
-dry_datA$DOYsq=dry_datA$DOY^2
-#dry_datA$doys_sq11=poly(dry_datA$DOY,2, raw = T)[,2]
-#dry_datA$doys_sq=poly(dry_datA$DOY,2, raw = T)
+dry_datB$year=as.numeric(dry_datB$year)
+dry_datB$DOY=as.numeric(dry_datB$DOY)
+dry_datB$DOYsq=dry_datB$DOY^2
+#dry_datB$doys_sq11=poly(dry_datB$DOY,2, raw = T)[,2]
+#dry_datB$doys_sq=poly(dry_datB$DOY,2, raw = T)
 
 #standardize variables
-dry_datA$years = (dry_datA$year - mean(dry_datA$year))/sd(dry_datA$year)
-dry_datA$DOYs = (dry_datA$DOY - mean(dry_datA$DOY))/sd(dry_datA$DOY)
-dry_datA$DOYsqs = (dry_datA$DOYsq - mean(dry_datA$DOYsq))/sd(dry_datA$DOYsq)
-#dry_datA$doys_sqs1 = (dry_datA$doys_sq[,1] - mean(dry_datA$doys_sq[,1]))/sd(dry_datA$doys_sq[,1])
-#dry_datA$doys_sqs2 = (dry_datA$doys_sq[,2] - mean(dry_datA$doys_sq[,2]))/sd(dry_datA$doys_sq[,2])
-#dry_datA$doys_sqs11 = (dry_datA$doys_sq11 - mean(dry_datA$doys_sq11))/sd(dry_datA$doys_sq11)
+dry_datB$years = (dry_datB$year - mean(dry_datB$year))/sd(dry_datB$year)
+dry_datB$DOYs = (dry_datB$DOY - mean(dry_datB$DOY))/sd(dry_datB$DOY)
+dry_datB$DOYsqs = (dry_datB$DOYsq - mean(dry_datB$DOYsq))/sd(dry_datB$DOYsq)
+#dry_datB$doys_sqs1 = (dry_datB$doys_sq[,1] - mean(dry_datB$doys_sq[,1]))/sd(dry_datB$doys_sq[,1])
+#dry_datB$doys_sqs2 = (dry_datB$doys_sq[,2] - mean(dry_datB$doys_sq[,2]))/sd(dry_datB$doys_sq[,2])
+#dry_datB$doys_sqs11 = (dry_datB$doys_sq11 - mean(dry_datB$doys_sq11))/sd(dry_datB$doys_sq11)
 
-#Data Analysis####
+#datB Analysis####
 
 #Dryas
 library(ordinal)
-dry_datA$stage=as.factor(dry_datA$stage)
 
-s1=clmm(stage~  DOYs+ DOYsqs + years + # base linear terms
-          # timing and long-term trend interaction
+s2=clmm(stage~  DOYs+ DOYsqs + years +
           DOYs * years+
           DOYsqs * years+
-          (1 |Plot),#ranef
-        data=dry_datA)
+          (1 |Plot),
+        data=dry_datB)
 
-library(effects)
-plot(Effect("DOYs",s1))  #shows predictions with confidence bands
-
-predict(s1,data.frame(Type="tot_bud"))
+AIC(s2)
 
 #plot predictions
-s1_preds=as.vector(fitted(s1))%>%cbind(dry_datA)
+s2_preds=as.vector(fitted.values(s2))%>%cbind(dry_datB)
 
-colnames(s1_preds)[1]="preds"
+colnames(s2_preds)[1]="preds"
 
 #check correspondence of actual and predicted
-s11=s1_preds%>%
+s11=s2_preds%>%
   group_by(Plot, DOY, year,stage)%>%summarise(preds=mean(preds))
 
-s12=left_join(dry_dat_grp, s11)
+s11=left_join(dry_dat_grp, s11)%>%replace_na(list(preds=0))
 
-ggplot(s12, aes(x=DOY, y=preds, col=as.factor(year)))+geom_line()+
+ggplot(s11, aes(x=DOY, y=preds, col=as.factor(year)))+geom_line()+
   ylab("predicted proportions")+xlab("Day of Year (DOY)")+
-  theme_classic()+ggtitle("Dryas (flowers)")+scale_color_viridis_d()+
-  facet_grid(rows=vars(Plot), cols=vars(stage))+
-  geom_point(aes(x=DOY, y=value), size=0.85)
+  theme_classic()+ggtitle("Dryas")+scale_color_viridis_d()+
+ facet_grid(rows=vars(Plot), cols=vars(stage))+xlim(150,250)+
+ geom_point(aes(x=DOY, y=value, col=as.factor(year)), size=0.85)
+
+ModelMetrics::rmse(s11$preds, s11$value)
+
+s1b=s11%>%filter(stage=="tot_bud")
+s1f=s11%>%filter(stage=="tot_flwr")
+s1s=s11%>%filter(stage=="tot_sen")
+
+plot(s1b$preds, s1b$value)
+plot(s1f$preds, s1f$value)
+plot(s1s$preds, s1s$value)
 
 #determine change in peak dates using derivatives
 
@@ -127,7 +130,7 @@ ggplot(s12, aes(x=DOY, y=preds, col=as.factor(year)))+geom_line()+
 
 yrs=1996:2024
 
-coefs=coef(s1)
+coefs=coef(s2)
 
 b0 <- coefs['(Intercept)']
 b1 <- coefs['DOYs']
