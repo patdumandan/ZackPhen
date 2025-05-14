@@ -57,22 +57,24 @@ lyc_dat=arth_data%>%filter(HoyeTaxon=="Lycosidae")
 
 #Collembola
 
-col_mod_nb=glmer.nb(TotalCatch1~ DOYs+ DOYsqs + years + # base linear terms
-                DOYs*years + # timing and long-term trend interaction
-                DOYsqs* years+ #curve and long-term trend interaction
-                (1|Plot.ID), #random effects to account for plot-level differences in trends
-               data=col_dat)
+col_mod_nb=glmer.nb(TotalCatch1 ~  DOYs+ DOYsqs + years +
+                 DOYs * years+
+                 DOYsqs * years+
+                (1|Plot.ID),
+                family="nbinom",
+                data=col_dat,
+                control = lmerControl(optimizer = "bobyqa"))
 
-col_mod_pois=glmer(TotalCatch1~ DOYs+ DOYsqs + years + # base linear terms
-                      DOYs*years + # timing and long-term trend interaction
-                      DOYsqs* years+ #curve and long-term trend interaction
-                      (1|Plot.ID), #random effects to account for plot-level differences in trends
+col_mod_pois=glmer(TotalCatch1 ~  DOYs+ DOYsqs + years +
+                     DOYs * years+
+                     DOYsqs * years+
+                     (1|Plot.ID),#random effects to account for plot-level differences in trends
                     family="poisson", data=col_dat)
 
 AIC(col_mod_nb)
 AIC(col_mod_pois)
 
-col_preds=as.vector(predict(col_mod_pois, type="response"))%>%cbind(col_dat)
+col_preds=as.vector(predict(col_mod_nb, type="response"))%>%cbind(col_dat)
 colnames(col_preds)[1]="preds"
 
 col_preds1=col_preds%>%
@@ -81,11 +83,10 @@ col_preds1=col_preds%>%
 
 ggplot(col_preds, aes(x=DOY, y=preds, col=as.factor(Year)))+geom_line()+
   theme_classic()+ggtitle("Collembola")+scale_color_viridis_d()+
-# geom_point(aes(x=DOY, y=TotalCatch1), col="black", size=1)+
+ geom_point(aes(x=DOY, y=TotalCatch1, col=as.factor(Year)), size=1)+
   facet_wrap(~Plot.ID)
 
-ggplot(col_preds1, aes(y=value, x=DOY, col=value_type))+geom_point()+facet_wrap(~Plot.ID)+
-  theme_classic()
+ModelMetrics::rmse(col_preds$preds, col_preds$TotalCatch1)
 
 #determine change in peak dates using derivatives
 
@@ -97,8 +98,9 @@ ggplot(col_preds1, aes(y=value, x=DOY, col=value_type))+geom_point()+facet_wrap(
 #ax^2=DOY^2(B1)+DOY^2:year(B4)*year, bx=DOY(B2)+DOY:year(B5)*year
 
 yrs=1996:2024
+yrs_std = (yrs - mean(col_dat$year)) / sd(col_dat$year)
 
-coefs=fixef(col_mod_pois)
+coefs=fixef(col_mod_nb)
 
 b0 <- coefs['(Intercept)']
 b1 <- coefs['DOYs']
@@ -109,6 +111,15 @@ b5 <- coefs['DOYsqs:years']
 
 bt=b1+b4*yrs
 ct= b2+b5*yrs
-peak=bt/(2*ct)
-plot(peak~yrs)
+peak_std = -bt / (2 * ct)
+
+# Convert back from standardized DOY to actual DOY
+
+peak_doy = peak_std * sd(col_dat$DOY) + mean(col_dat$DOY)
+par(mfrow=c(1,2))
+plot(peak_doy ~ yrs, type="l", ylab="Peak DOY", xlab="Year", main="Collembola Estimated Phenological Peak")
+
+plot(ct~ yrs, type="l", ylab="c", xlab="Year", main="Collembola Phenological Shape")
+
+
 

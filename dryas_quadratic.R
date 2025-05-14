@@ -88,6 +88,7 @@ ggplot(s1_preds, aes(x=DOY, y=preds, col=as.factor(year)))+geom_line()+
   theme_classic()+ggtitle("Dryas (flowers)")+scale_color_viridis_d()+facet_wrap(~Plot)+
   geom_point(aes(x=DOY, y=prop_flwr, col=as.factor(year)), size=0.85)
 
+#model diagnostics
 AIC(s1)
 ModelMetrics::rmse(s1_preds$preds, s1_preds$prop_flwr)
 
@@ -101,6 +102,8 @@ ModelMetrics::rmse(s1_preds$preds, s1_preds$prop_flwr)
 #ax^2=DOY^2(B1)+DOY^2:year(B4)*year, bx=DOY(B2)+DOY:year(B5)*year
 
 yrs=1996:2024
+# Standardize years the same way as in the model
+yrs_std = (yrs - mean(dry_datA$year)) / sd(dry_datA$year)
 
 coefs=fixef(s1)
 
@@ -111,7 +114,24 @@ b3 <- coefs['years']
 b4 <- coefs['DOYs:years']
 b5 <- coefs['DOYsqs:years']
 
-bt=b1+b4*yrs
-ct= b2+b5*yrs
-peak=bt/(2*ct)
-plot(peak~yrs)
+bt = b1 + b4 * yrs_std
+ct = b2 + b5 * yrs_std
+peak_std = -bt / (2 * ct)
+
+# Convert back from standardized DOY to actual DOY
+
+peak_doy = peak_std * sd(dry_datA$DOY) + mean(dry_datA$DOY)
+
+par(mfrow=c(1,2))
+plot(peak_doy ~ yrs, type="l", ylab="Peak DOY", xlab="Year", main="Dryas Estimated Phenological Peak")
+plot(ct~ yrs, type="l", ylab="c", xlab="Year", main="Dryas Phenological Shape")
+
+# Check if predicted peaks match observed peaks roughly
+ggplot(s1_preds, aes(x = DOY, y = preds, group = year, col = as.factor(year))) +
+  geom_line() +
+  facet_wrap(~Plot) +
+  theme_minimal() +
+  labs(title = "Predicted Flowering Curve per Year",
+       y = "Predicted Flower Proportion")+
+  theme_classic()+scale_color_viridis_d()+
+  geom_point(aes(x=DOY, y=prop_flwr, col=as.factor(year)), size=0.85)
