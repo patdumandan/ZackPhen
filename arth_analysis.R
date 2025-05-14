@@ -40,7 +40,7 @@ unique(arth_data$Plot.ID)
 unique(arth_data$HoyeTaxon)
 
 bom_dat=arth_data%>%filter(HoyeTaxon=="Bombus")
-col_dat=arth_data%>%filter(HoyeTaxon=="Collembola")
+col_dat=arth_data%>%filter(HoyeTaxon=="Collembola") #springtails
 ich_dat=arth_data%>%filter(HoyeTaxon=="Ichneumonidae")
 aca_dat=arth_data%>%filter(HoyeTaxon=="Acari")
 chi_dat=arth_data%>%filter(HoyeTaxon=="Chironomidae")
@@ -121,5 +121,70 @@ plot(peak_doy ~ yrs, type="l", ylab="Peak DOY", xlab="Year", main="Collembola Es
 
 plot(ct~ yrs, type="l", ylab="c", xlab="Year", main="Collembola Phenological Shape")
 
+#Ich
+
+ich_mod_nb=glmer.nb(TotalCatch1 ~  DOYs+ DOYsqs + years +
+                      DOYs * years+
+                      DOYsqs * years+
+                      (1|Plot.ID),
+                    family="nbinom",
+                    data=ich_dat,
+                    control = glmerControl(optimizer = "bobyqa"))
+
+ich_mod_pois=glmer(TotalCatch1 ~  DOYs+ DOYsqs + years +
+                     DOYs * years+
+                     DOYsqs * years+
+                     (1|Plot.ID),#random effects to account for plot-level differences in trends
+                   family="poisson", data=ich_dat)
+
+AIC(ich_mod_nb)
+AIC(ich_mod_pois)
+
+ich_preds=as.vector(predict(ich_mod_nb, type="response"))%>%cbind(ich_dat)
+colnames(ich_preds)[1]="preds"
+
+ich_preds1=ich_preds%>%
+  rename(predicted=preds, actual=TotalCatch1)%>%
+  pivot_longer(cols=c("predicted", "actual"), names_to="value_type")
+
+ggplot(ich_preds, aes(x=DOY, y=preds, col=as.factor(Year)))+geom_line()+
+  theme_classic()+ggtitle("Ichneumonidae")+scale_color_viridis_d()+
+  geom_point(aes(x=DOY, y=TotalCatch1, col=as.factor(Year)), size=1)+
+  facet_wrap(~Plot.ID)
+
+ModelMetrics::rmse(ich_preds$preds, ich_preds$TotalCatch1)
+
+#determine change in peak dates using derivatives
+
+#given y=ax^2+bx+c, we can assume that change in (a) over years can
+#tell us if the curve is widening or narrowing,
+#and the point where the 2nd derivative (2ax+b)=0 is the peak
+
+#to get the 2nd derivative wrt to DOY, we assume that
+#ax^2=DOY^2(B1)+DOY^2:year(B4)*year, bx=DOY(B2)+DOY:year(B5)*year
+
+yrs=1996:2024
+yrs_std = (yrs - mean(ich_dat$year)) / sd(ich_dat$year)
+
+coefs=fixef(ich_mod_nb)
+
+b0 <- coefs['(Intercept)']
+b1 <- coefs['DOYs']
+b2 <- coefs['DOYsqs']
+b3 <- coefs['years']
+b4 <- coefs['DOYs:years']
+b5 <- coefs['DOYsqs:years']
+
+bt=b1+b4*yrs
+ct= b2+b5*yrs
+peak_std = -bt / (2 * ct)
+
+# Convert back from standardized DOY to actual DOY
+
+peak_doy = peak_std * sd(ich_dat$DOY) + mean(ich_dat$DOY)
+par(mfrow=c(1,2))
+plot(peak_doy ~ yrs, type="l", ylab="Peak DOY", xlab="Year", main="Ich. Estimated Phenological Peak")
+
+plot(ct~ yrs, type="l", ylab="c", xlab="Year", main="Ich. Phenological Shape")
 
 
