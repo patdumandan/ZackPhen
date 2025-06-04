@@ -67,7 +67,7 @@ lines(peaks_df$year, peaks_df$peak_doy, col = "gray40", lwd = 1)
 abline(h = mean_peak, col = "black", lty = 3)
 
 # Add linear trend line
-abline(lm_peak, col = "darkgreen", lwd = 2)
+abline(lm_peak, col = "black", lwd = 2)
 
 # Determine central text position
 text_x <- mean(range(peaks_df$year, na.rm = TRUE))
@@ -76,11 +76,11 @@ text_y <- mean(range(peaks_df$peak_doy, na.rm = TRUE))
 # Add annotation text at center
 text(text_x, text_y,
      labels = paste0("Trend: ", round(slope, 3), " DOY/year\np = ", signif(pval, 3)),
-     col = "darkgreen", cex = 0.95, font = 2)
+     col = "black", cex = 0.95, font = 2)
 
 # Add legend
 legend("topleft", legend = c("Above avg", "Below avg", "Trend", "Mean"),
-       col = c("darkred", "blue", "darkgreen", "black"),
+       col = c("darkred", "blue", "black", "black"),
        pch = c(19, 19, NA, NA), lty = c(NA, NA, 1, 3), lwd = c(NA, NA, 2, 1),
        bty = "n")
 
@@ -175,13 +175,13 @@ ct_pval <- summary(ct_lm)$coefficients[2, 4]
 
 # Base plot
 plot(shape_df$year, shape_df$ct, type = "l", col = "red", lwd = 2,
-     ylab = "Curvature (ct)", xlab = "Year", main = "Phenological Curve Curvature Over Time")
+     ylab = "Curvature (ct)", xlab = "Year", main = "Phenological Shapes Over Time")
 
 # Highlight years 1997 and 2021
-highlight_years <- c(1997, 2021)
+highlight_years <- c(2018)
 points(shape_df$year[shape_df$year %in% highlight_years],
-       shape_df$ct[shape_df$year %in% highlight_years],
-       col = "darkgreen", pch = 19, cex = 1.5)
+     shape_df$ct[shape_df$year %in% highlight_years],
+    col = "darkgreen", pch = 19, cex = 1.5)
 text(shape_df$year[shape_df$year %in% highlight_years],
      shape_df$ct[shape_df$year %in% highlight_years],
      labels = highlight_years, pos = 3, cex = 0.9)
@@ -198,7 +198,7 @@ abline(h = 0, lty = 2, col = "black")       # ct = 0
 abline(h = -0.05, lty = 3, col = "gray40")  # flat-ish threshold
 
 # Linear trend line
-abline(ct_lm, col = "blue", lwd = 2)
+abline(ct_lm, col = "black", lwd = 2)
 
 # Add slope and p-value
 text_x <- min(shape_df$year) + 1
@@ -206,9 +206,43 @@ text_y <- max(shape_df$ct, na.rm = TRUE) * 0.9
 text(text_x, text_y,
      labels = paste0("Trend: ", round(ct_slope, 4),
                      " /yr\np = ", signif(ct_pval, 3)),
-     col = "blue", adj = 0)
+     col = "black", adj = 0)
 
 # Legend
-legend("bottomright", legend = c("ct", "Trend line",  "ct > 0"),
+legend("bottomleft", legend = c("ct", "Trend line",  "ct > 0"),
        col = c("red", "blue", "purple"),
        pch = c(NA, NA, 19), lty = c(1, 1, NA), lwd = 2, bty = "n")
+
+# Base plot
+plot(peaks_df$year, peaks_df$peak_doy, type = "n",
+     xlab = "Year", ylab = "Estimated Peak DOY",
+     main = "Year-Specific Peak Flowering Dates (with Trend)")
+
+# Add points colored by above/below average
+points(peaks_df$year, peaks_df$peak_doy, col = cols, pch = 19)
+
+# Add connecting line
+lines(peaks_df$year, peaks_df$peak_doy, col = "gray40", lwd = 1)
+
+# Add horizontal mean line
+abline(h = mean_peak, col = "black", lty = 3)
+
+# Add linear trend line
+abline(lm_peak, col = "black", lwd = 2)
+
+# Highlight the 2018 point
+highlight_index <- which(peaks_df$year == 2018)
+if (length(highlight_index) == 1) {
+  points(peaks_df$year[highlight_index], peaks_df$peak_doy[highlight_index],
+         col = "red", pch = 21, bg = "yellow", cex = 1.5, lwd = 2)
+}
+
+# Determine central text position
+text_x <- mean(range(peaks_df$year, na.rm = TRUE))
+text_y <- mean(range(peaks_df$peak_doy, na.rm = TRUE))
+
+# Add annotation text at center
+text(text_x, text_y,
+     labels = paste0("Trend: ", round(slope, 3), " DOY/year\np = ", signif(pval, 3)),
+     col = "black", cex = 0.95, font = 2)
+

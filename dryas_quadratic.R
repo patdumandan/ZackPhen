@@ -95,7 +95,7 @@ ggplot(s1_preds, aes(x=DOY, y=preds, col=yearc))+geom_line()+
   theme_classic()+ggtitle("Dryas (flowers)")+scale_color_viridis_d()+facet_wrap(~Plot)+
   geom_point(aes(x=DOY, y=prop_flwr, col=yearc), size=0.85)
 
-highlight_years <- c("1997", "2021")
+highlight_years <- c("2018")
 
 ggplot(s1_preds, aes(x = DOY, y = preds, group = year, col = as.factor(year))) +
   geom_line(linewidth = 0.6, alpha = 0.5) +  # default lines for all years
@@ -105,7 +105,7 @@ ggplot(s1_preds, aes(x = DOY, y = preds, group = year, col = as.factor(year))) +
   geom_point(aes(y = prop_flwr), size = 0.85) +  # points for observed data
   facet_wrap(~Plot) +
   scale_color_manual(
-    values = c("1997" = "orange", "2021" = "darkgreen"),
+    values = c("2018" = "darkgreen"),
     breaks = highlight_years,
     guide = guide_legend(title = "Highlighted Years")
   ) +
