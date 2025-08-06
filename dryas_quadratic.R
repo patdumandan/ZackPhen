@@ -6,6 +6,7 @@ require(dplyr)
 require(lubridate)
 require(ggplot2)
 require(lme4)
+require(cmdstanr)
 
 #Data Wrangling####
 dry_dat=read.csv("https://raw.githubusercontent.com/patdumandan/ZackPhen/refs/heads/main/Dryas%20phenology_10.17897_JSQ7-6355/Dryas%20phenology_10.17897_JSQ7-6355_data.txt",
@@ -63,7 +64,7 @@ ggplot(dry_datA, aes(x=DOY, y=tot_flwr, col=year))+geom_point()+facet_wrap(~Plot
 dry_datA$yearc = as.factor(dry_datA$year) # - mean(dry_datA$year))/sd(dry_datA$year)
 
 #dry_datA$years = (dry_datA$year - mean(dry_datA$year))/sd(dry_datA$year)
-dry_datA$DOYs = scale(dry_datA$DOY, center = TRUE, scale = TRUE)
+dry_datA$DOYs = scale(dry_datA$DOY, center = TRUE, scale = TRUE)[,1]
 #polynomial term for DOY, no need to standardize to avoid distortion of polynomial relationship,
 #and interfere interpretability of interaction terms
 dry_datA$DOYsqs=dry_datA$DOYs^2
