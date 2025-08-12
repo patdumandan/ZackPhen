@@ -1,12 +1,10 @@
 data {
   int<lower=1> N;                      // observations
   int<lower=1> Nplots;                      // number of plots
-  int<lower=1> Nyr;                      // number of year levels
-  real DOY_sd;
-  real DOY_mean;
+  int<lower=1> Nyr;                      // number of years
+  real DOY_sd;                           //sd of raw DOY
+  real DOY_mean;                        //mean of raw DOY
 
-  // int<lower=1, upper=Nplots> plot_id[N];
-  // int<lower=1, upper=Nplots> year_id[N];
   array[N] int<lower=1, upper=Nplots> plot_id;
   array[N] int<lower=1, upper=Nyr> year_id;
 
@@ -26,16 +24,6 @@ parameters {
   vector[Nyr] beta_DOYs;         // DOYs slope per year
   vector[Nyr] beta_DOYsqs;       // DOYsqs slope per year
 
-  // real beta0;                          // intercept
-  // //vector[Y] beta_year;                 // year fixed effects
-  // real beta_year;
-  //
-  // real beta_DOY;
-  // real beta_DOYsqs;
-  //
-  // vector[Y] beta_DOY_year;            // interaction: DOY * year
-  // vector[Y] beta_DOYsqs_year;         // interaction: DOYsqs * year
-
 }
 
 // transformed parameters {
@@ -44,8 +32,8 @@ parameters {
 
 model {
     alpha ~ normal(0, 5);
-    beta_DOYs ~ normal(0, 2);
-    beta_DOYsqs ~ normal(0, 2);
+    beta_DOYs ~ normal(0, 2);          // adjust SD as needed
+    beta_DOYsqs ~ normal(-1, 0.3);       // negative to enforce concave-down
     u_plot ~ normal(0, sigma_plot);
     sigma_plot ~ normal(0, 2);
 
@@ -81,10 +69,12 @@ generated quantities {
     if (beta_DOYsqs[y] != 0) {
       DOY_peak_std[y] = -beta_DOYs[y] / (2 * beta_DOYsqs[y]);
       DOY_peak_unscaled[y] = DOY_peak_std[y] * DOY_sd + DOY_mean;
-    } else {
+      DOY_peak_unscaled[y]=fmin(fmax(DOY_peak_unscaled[y], 120), 250);//to constrain
+      //predictions to 1 to 365
+    }
+    else {
       DOY_peak_std[y] = negative_infinity();
       DOY_peak_unscaled[y] = negative_infinity();
     }
   }
 }
-

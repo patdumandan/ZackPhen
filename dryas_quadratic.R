@@ -12,6 +12,9 @@ require(cmdstanr)
 dry_dat=read.csv("https://raw.githubusercontent.com/patdumandan/ZackPhen/refs/heads/main/Dryas%20phenology_10.17897_JSQ7-6355/Dryas%20phenology_10.17897_JSQ7-6355_data.txt",
                  sep="\t", header=T)
 
+dry_dat=read.csv("C:\\pdumandanSLU\\PatD-SLU\\SLU\\phenology-project\\ZackPhen\\data\\raw\\Dryas phenology_10.17897_JSQ7-6355_data.txt",
+                 sep="\t", header=T)
+
 dry_dat$Date=as.POSIXct(dry_dat$Date, tz="GMT", format = "%Y-%m-%d")
 
 dry_dat_raw=dry_dat%>%
@@ -52,8 +55,14 @@ dry_datA=dry_dat_grp%>%
   replace_na(list(value=0))
 
 #Data Viz####
-ggplot(dry_datA, aes(x=DOY, y=tot_flwr, col=year))+geom_point()+facet_wrap(~Plot)+
-  theme_classic()+stat_smooth(method="gam", col="black")+ggtitle("Dryas")
+ggplot(s18, aes(x=DOY, y=tot_flwr, col=as.factor(year)))+geom_point()+
+  geom_line()+facet_wrap(~Plot)+
+  scale_color_manual(
+    values = c("2021" = "darkgreen", "1998" = "orange", "2020" = "blue", "2018"="red"),
+    breaks = highlight_years,
+    guide = guide_legend(title = "Odd Years")
+  )+
+  theme_classic()+ggtitle("Dryas")
 
 #Data Analysis###
 
