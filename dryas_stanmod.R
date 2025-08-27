@@ -36,15 +36,15 @@ fit <- drymod2$sample(
   seed = 123,
   chains = 4,
   parallel_chains = 4,
-  iter_sampling = 2000,
-  iter_warmup = 500
+  iter_sampling = 200,
+  iter_warmup = 50
 )
 
 #predictions
 
 draws <- fit$draws(format="df", variables="y_pred")
 y_pred_matrix <- as.data.frame(draws)
-y_pred_matrix=y_pred_matrix[,-953:-955]
+y_pred_matrix=y_pred_matrix[,-175:-177]
 
 y_pred_mean <- apply(y_pred_matrix, MARGIN=2, mean) #margin=2 is column mean
 y_pred_lower <- apply(y_pred_matrix, MARGIN=2, quantile, probs = 0.025)
@@ -132,7 +132,7 @@ summary_peak_hpdi <- peak_df |>
   unnest_wider(hpdi)  # expands the "hdi" list column into lower/upper
 
 # visualise
-ggplot(summary_peak, aes(x = year, y = median, col=as.factor(year))) +
+ggplot(summary_peak, aes(x = year, y = mean, col=as.factor(year))) +
   geom_line(data = subset(summary_peak, year %in% highlight_years),
             aes(x = year, y = median, group = year, color = as.factor(year)),
             linewidth = 1.2) +  # bold lines for highlighted years
@@ -146,7 +146,7 @@ ggplot(summary_peak, aes(x = year, y = median, col=as.factor(year))) +
     title = "Dryas",
     x = "Year",
     y = "Peak Day of Year (DOY)",
-    caption = "Median and 90% CI")+
+    caption = "Mean and 90% CI")+
   theme_classic()
 
 slope_samples <- peak_df |>
@@ -178,3 +178,46 @@ ggplot(slope_samples, aes(x = slope)) +
     y = "Density"
   ) +
   theme_classic()
+
+#curvatures####
+ct_df <- as_draws_df(draws_ct) |>
+  mutate(.draw = row_number()) |>
+  tidyr::pivot_longer(
+    cols = starts_with("beta_DOYsqs"),
+    names_pattern = "beta_DOYsqs\\[(\\d+)\\]",
+    names_to = "year_index",
+    values_to = "ct"
+  ) |>
+  mutate(
+    year_index = as.integer(year_index),
+    year = years[year_index]
+  )
+
+
+summary_ct <- ct_df |>
+  group_by(year) |>
+  summarise(
+    mean  = mean(ct),
+    median= median(ct),
+    lower= quantile(ct, 0.05),
+    upper= quantile(ct, 0.95)
+  )%>%
+  mutate(
+    highlight_group = ifelse(year %in% highlight_years, as.character(year), "Other"))
+
+ggplot(summary_ct, aes(x = year, y = mean, col=as.factor(year))) +
+  geom_line(data = subset(summary_peak, year %in% highlight_years),
+            aes(x = year, y = median, group = year, color = as.factor(year)),
+            linewidth = 1.2) +  # bold lines for highlighted years
+  geom_point(size = 2) +
+  geom_errorbar(aes(ymin = lower, ymax = upper), width = 0.3) +
+  scale_color_manual(
+    values = c("2021" = "darkgreen", "1998" = "orange", "2020" = "blue", "2018"="red"),
+    breaks = highlight_years,
+    guide = guide_legend(title = "Odd Years"))+
+  labs(
+    title = "Dryas",
+    x = "Year",
+    y = "curvature (beta_DOYsqs)",
+    caption = "Mean and 90% CI")+
+  theme_classic()+ylim(-5,2.5)

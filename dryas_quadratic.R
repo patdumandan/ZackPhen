@@ -54,14 +54,22 @@ dry_datA=dry_dat_grp%>%
   #select(,-c(15:20))%>%
   replace_na(list(value=0))
 
+#to check weird years
+highlight_years <- c("2021", "1998", "2020", "2018")
+
+
+dry_datB=dry_datA%>%
+  pivot_longer(cols=4:6, names_to="stage")%>%
+  select(Plot, year, DOY, stage, value)
+
 #Data Viz####
-ggplot(s18, aes(x=DOY, y=tot_flwr, col=as.factor(year)))+geom_point()+
-  geom_line()+facet_wrap(~Plot)+
-  scale_color_manual(
-    values = c("2021" = "darkgreen", "1998" = "orange", "2020" = "blue", "2018"="red"),
-    breaks = highlight_years,
-    guide = guide_legend(title = "Odd Years")
-  )+
+ggplot(dry_datB, aes(x=DOY, y=value, col=as.factor(stage)))+geom_point()+
+  geom_line()+facet_wrap(~year+Plot)+
+  # scale_color_manual(
+  #   values = c("2021" = "darkgreen", "1998" = "orange", "2020" = "blue", "2018"="red"),
+  #   breaks = highlight_years,
+  #   guide = guide_legend(title = "Odd Years")
+  #)+
   theme_classic()+ggtitle("Dryas")
 
 #Data Analysis###
