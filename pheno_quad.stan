@@ -69,8 +69,8 @@ generated quantities {
     if (beta_DOYsqs[y] != 0) {
       DOY_peak_std[y] = -beta_DOYs[y] / (2 * beta_DOYsqs[y]);
       DOY_peak_unscaled[y] = DOY_peak_std[y] * DOY_sd + DOY_mean;
-      DOY_peak_unscaled[y]=fmin(fmax(DOY_peak_unscaled[y], 120), 250);//to constrain
-      //predictions to 1 to 365
+      DOY_peak_unscaled[y]=fmin(fmax(DOY_peak_unscaled[y], 150), 270);//to constrain
+    //  predictions to 1 to 365
     }
     else {
       DOY_peak_std[y] = negative_infinity();
