@@ -96,8 +96,10 @@ plant_dat_clean=plant_dat_raw%>%
 plant_dat=plant_dat_clean%>%
   group_by(Plot,species, year, DOY, Date)%>%summarise(tot_buds=sum(tot_bud),
                                                 tot_flowers=sum(tot_flower),
-                                                tot_sen=sum(tot_senescent))%>%
-  filter()
+                                                tot_sen=sum(tot_senescent))
+
+plot_ct=plant_dat%>%group_by(species) %>%
+  summarise(nplot = n_distinct(Plot), .groups = "drop")
 
 #data checks###
 
@@ -106,6 +108,11 @@ library(diptest)
 
 dip_results <- plant_dat %>%
   group_by(species, Plot, year) %>%
+ # filter(
+ #  #   mean(tot_buds == 0, na.rm = TRUE) <= 0.25,
+ #   mean(tot_flowers == 0, na.rm = TRUE) <= 0.1)%>%
+ #  #   mean(tot_sen == 0, na.rm = TRUE) <= 0.25
+ #  # ) %>%
   summarise(
     D_statistic_buds = if (length(unique(tot_buds)) > 3) {
       tryCatch(dip.test(tot_buds)$statistic, error = function(e) NA)
@@ -126,18 +133,24 @@ dip_results <- plant_dat %>%
     unimodal_buds = ifelse(is.na(p_value_buds), NA, p_value_buds > 0.05),
     unimodal_flowers = ifelse(is.na(p_value_flowers), NA, p_value_flowers > 0.05),
     unimodal_senescent = ifelse(is.na(p_value_senescent), NA, p_value_senescent > 0.05),
-    Include= ifelse(unimodal_buds&unimodal_flowers&unimodal_senescent==TRUE, 1, 0)
+    all_D_stats_present = !is.na(D_statistic_buds) &
+      !is.na(D_statistic_flowers) &
+      !is.na(D_statistic_senescent),
+    Include= ifelse(  all_D_stats_present & unimodal_flowers==TRUE, 1, 0)
   )
 
 include_dat=dip_results%>%filter(Include==1)%>%
-  select(species, Plot, year, Include)
-
-yr_ct <- include_dat %>%
-  group_by(species, Plot) %>%
-  summarise(nyr = n_distinct(year), .groups = "drop")
+  group_by(species, year) %>%
+  summarise(n_plots_included = n_distinct(Plot), .groups = "drop")%>%
+  left_join(plot_ct)%>%
+  mutate(
+    frac_sampled = n_plots_included / nplot,
+    pass_50pct = frac_sampled >= 0.5
+  ) %>%
+  filter(pass_50pct == TRUE)
 
 plant_df=plant_dat%>%
-  semi_join(include_dat)
+  semi_join(include_dat, by=c("species", "year"))
 
 plant_datA <- plant_df %>%
   mutate(
@@ -150,9 +163,8 @@ plant_datA <- plant_df %>%
 
 
 #standardize variables
-plant_datA$yearc = as.factor(plant_datA$year) # - mean(plant_datA$year))/sd(plant_datA$year)
+plant_datA$yearc = as.factor(plant_datA$year)
 
-#plant_datA$years = (plant_datA$year - mean(plant_datA$year))/sd(plant_datA$year)
 plant_datA$DOYs = scale(plant_datA$DOY, center = TRUE, scale = TRUE)[,1]
 #polynomial term for DOY, no need to standardize to avoid distortion of polynomial relationship,
 #and interfere interpretability of interaction terms
