@@ -18,11 +18,11 @@ data {
 parameters {
   real alpha;                          // global intercept
 
-  vector[Nplots] u_plot_raw;          // for non.centered paramterization of plot-level random effects
-  real<lower=0> sigma_plot;
+  vector[Nplots] u_plot_raw;          // for NCP of plot-level random effects
+  real<lower=0> sigma_plot;           //plot-level variance
 
   vector[Nyr] beta_DOYs;         // DOYs slope per year
-  vector <upper=0> [Nyr] beta_DOYsqs;       // DOYsqs slope per year, constrained to be +
+  vector <upper=0> [Nyr] beta_DOYsqs;       // DOYsqs slope per year, constrained to be <0, for seasonal models
 }
 
 transformed parameters {
@@ -30,11 +30,10 @@ transformed parameters {
   u_plot = u_plot_raw * sigma_plot;
 }
 
-
 model {
     alpha ~ normal(0, 5);
     beta_DOYs ~ normal(0, 2);          // adjust SD as needed
-    beta_DOYsqs ~ normal(-1, 1);       // negative to enforce concave-down
+    beta_DOYsqs ~ normal(-1, 1);       // negative to favor concave-down, weakly informative
     sigma_plot ~ normal(0, 2);
     u_plot_raw ~ normal(0, 1);
 
@@ -47,7 +46,7 @@ model {
                beta_DOYsqs[year_id[n]] * DOYsqs[n] +
                u_plot[plot_id[n]];
 
-    tot_F[n] ~ binomial_logit(y_total, eta);
+    tot_F[n] ~ binomial_logit(y_total, eta); //binom(n,p)
   }
 }
 

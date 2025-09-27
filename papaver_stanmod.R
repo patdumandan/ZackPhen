@@ -2,7 +2,7 @@ library(cmdstanr)
 library(dplyr)
 
 # restructure data
-file_path="C:\\pdumandanSLU\\PatD-SLU\\SLU\\phenology-project\\ZackPhen"
+file_path="C:\\pdumandanSLU\\PatD-SLU\\SLU\\phenology-project\\ZackPhen\\data"
 dat_name=paste(file_path, '\\plant_datA','.csv', sep = '')
 
 plant_datA=read.csv(dat_name, header=T, sep=',',  stringsAsFactors = F)
@@ -25,7 +25,7 @@ pap_data <- list(
 )
 
 #compile model
-plant_mod=cmdstan_model("pheno_quad.stan")
+plant_mod=cmdstan_model("plant_phen.stan")
 
 #fit model
 pap_mod <- plant_mod$sample(
@@ -41,7 +41,7 @@ pap_mod <- plant_mod$sample(
 
 pap_draws <- pap_mod$draws(format="df", variables="y_pred")
 pap_pred_matrix <- as.data.frame(pap_draws)
-pap_pred_matrix=pap_pred_matrix[,-880:-882]
+pap_pred_matrix=pap_pred_matrix[,-834:-836]
 
 pap_pred_mean <- apply(pap_pred_matrix, MARGIN=2, mean) #margin=2 is column mean
 pap_pred_lower <- apply(pap_pred_matrix, MARGIN=2, quantile, probs = 0.025)
@@ -60,7 +60,7 @@ papdf_plot <- data.frame(
 )%>%cbind(pap_datA)
 
 #to check weird years
-highlight_years <- c( "1998", "2018", "1997", "2014", "2015", "2020", "2021")
+highlight_years <- c( "1998", "2018", "1997", "2014", "2015", "2020", "2021", "2016")
 
 ggplot(papdf_plot, aes(x = DOY, y = pred_mean, group = year, col = as.factor(year))) +
   geom_line(linewidth = 0.6, alpha = 0.5) +  # default lines for all years
@@ -70,7 +70,7 @@ ggplot(papdf_plot, aes(x = DOY, y = pred_mean, group = year, col = as.factor(yea
   geom_point(aes(y = tot_F), size = 1.5) +  # points for observed data
   facet_wrap(~Plot) +
   scale_color_manual(
-    values = c( "1998" = "orange", "2018"="red", "1997"= "blue", "2014"="green", "2015"="pink", "2020"="black", "2021"="violet"),
+    values = c( "1998" = "orange", "2018"="red", "1997"= "blue", "2014"="green", "2015"="pink", "2016"="black", "2021"="violet"),
     breaks = highlight_years,
     guide = guide_legend(title = "Odd Years")) +
   theme_classic() +labs(

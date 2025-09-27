@@ -2,7 +2,7 @@ library(cmdstanr)
 library(dplyr)
 
 # restructure data
-file_path="C:\\pdumandanSLU\\PatD-SLU\\SLU\\phenology-project\\ZackPhen"
+file_path="C:\\pdumandanSLU\\PatD-SLU\\SLU\\phenology-project\\ZackPhen\\raw"
 dat_name=paste(file_path, '\\plant_datA','.csv', sep = '')
 
 plant_datA=read.csv(dat_name, header=T, sep=',',  stringsAsFactors = F)
@@ -25,7 +25,7 @@ cass_data <- list(
 )
 
 #compile model
-plant_mod=cmdstan_model("pheno_quad.stan")
+plant_mod=cmdstan_model("plant_phen.stan")
 
 #fit model
 cas_mod <- plant_mod$sample(
@@ -41,7 +41,7 @@ cas_mod <- plant_mod$sample(
 
 cas_draws <- cas_mod$draws(format="df", variables="y_pred")
 cas_pred_matrix <- as.data.frame(cas_draws)
-cas_pred_matrix=cas_pred_matrix[,-876:-878]
+cas_pred_matrix=cas_pred_matrix[,-865:-867]
 
 cas_pred_mean <- apply(cas_pred_matrix, MARGIN=2, mean) #margin=2 is column mean
 cas_pred_lower <- apply(cas_pred_matrix, MARGIN=2, quantile, probs = 0.025)

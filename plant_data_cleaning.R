@@ -39,7 +39,7 @@ pap_dat$Date=as.POSIXct(pap_dat$Date, tz="GMT", format = "%Y-%m-%d")
 pap_dat_raw=pap_dat%>%
   mutate(year=year(Date), month=month(Date), dia=day(Date), species="Papaver")%>%
   mutate(DOY=yday(Date))%>%
-  select(-Field_remarks, -General_remarks, -Date)%>%
+  select(-Field_remarks, -General_remarks)%>%
   filter(Plot%in%c("Pap1", "Pap2", "Pap3", "Pap4"))
 
 ###salix####
@@ -64,7 +64,7 @@ sax_dat_raw=sax_dat%>%
   mutate(year=year(Date), month=month(Date), dia=day(Date), species="Saxifraga")%>%
   mutate(DOY=yday(Date))%>%
   select(-General_remarks)%>%
-  filter(Plot%in%c("Sax1", "Sax2", "Sax3"))
+  filter(Plot%in%c("Sax1", "Sax2", "Sax3"), month<8)
 
 ###silene####
 sil_name=paste(file_path, '\\Silene phenology_10.17897_6GVG-QH42_data','.txt', sep = '')
@@ -75,7 +75,7 @@ sil_dat$Date=as.POSIXct(sil_dat$Date, tz="GMT", format = "%Y-%m-%d")
 sil_dat_raw=sil_dat%>%
   mutate(year=year(Date), month=month(Date), dia=day(Date), species="Silene")%>%
   mutate(DOY=yday(Date))%>%
-  select(-General_Remarks, -Field_Remarks)%>%
+  select(-General_remarks, -Field_remarks)%>%
   filter(Plot%in%c("Sil1", "Sil2", "Sil3", "Sil4"))
 
 #all plants####
@@ -86,11 +86,11 @@ plant_dat_raw[plant_dat_raw==-9999] <- 0
 plant_dat_raw[plant_dat_raw==-999] <- 0
 
 plant_dat_clean=plant_dat_raw%>%
-  mutate(tot_flower=rowSums(across(c(Male_flowers, Female_flowers, Flowers, Open)), na.rm=T),
+  mutate(tot_flower=rowSums(across(c(Male_flowers, Female_flowers, Flowers)), na.rm=T),
          tot_bud=Buds,
          tot_senescent=rowSums(across(c(Senescent, Seed_hairs)), na.rm=T))%>%
   select(Plot, Section, year, Date, month, dia, species, DOY, tot_flower, tot_bud, tot_senescent)%>%
-  filter(!year<1996, month%in%c(6:9))
+  filter(!year<1996, month%in%c(6:8)) #June to August only
 
 #data reshaping####
 plant_dat=plant_dat_clean%>%
@@ -98,6 +98,7 @@ plant_dat=plant_dat_clean%>%
                                                 tot_flowers=sum(tot_flower),
                                                 tot_sen=sum(tot_senescent))
 
+#to be used later to remove years where not enough plots have estimated curves
 plot_ct=plant_dat%>%group_by(species) %>%
   summarise(nplot = n_distinct(Plot), .groups = "drop")
 
@@ -133,20 +134,18 @@ dip_results <- plant_dat %>%
     unimodal_buds = ifelse(is.na(p_value_buds), NA, p_value_buds > 0.05),
     unimodal_flowers = ifelse(is.na(p_value_flowers), NA, p_value_flowers > 0.05),
     unimodal_senescent = ifelse(is.na(p_value_senescent), NA, p_value_senescent > 0.05),
-    all_D_stats_present = !is.na(D_statistic_buds) &
+    all_D_stats_present = !is.na(D_statistic_buds) & #to remove those not estimated
       !is.na(D_statistic_flowers) &
       !is.na(D_statistic_senescent),
-    Include= ifelse(  all_D_stats_present & unimodal_flowers==TRUE, 1, 0)
-  )
+    Include= ifelse(all_D_stats_present & unimodal_flowers==TRUE, 1, 0))
 
 include_dat=dip_results%>%filter(Include==1)%>%
   group_by(species, year) %>%
   summarise(n_plots_included = n_distinct(Plot), .groups = "drop")%>%
   left_join(plot_ct)%>%
-  mutate(
+  mutate( #remove rows if not enough plots have enough samples to estimate curve
     frac_sampled = n_plots_included / nplot,
-    pass_50pct = frac_sampled >= 0.5
-  ) %>%
+    pass_50pct = frac_sampled >= 0.5)%>%
   filter(pass_50pct == TRUE)
 
 plant_df=plant_dat%>%
@@ -158,15 +157,17 @@ plant_datA <- plant_df %>%
     tot_NF = tot_buds + tot_sen
   ) %>%
   group_by(species) %>%
-  mutate(plot_id = dense_rank(Plot)) %>%
+  mutate(plot_id = dense_rank(Plot)) %>% #to create species-specific plot ID
   ungroup()
 
-
-#standardize variables
+#treat year as category for random effects
 plant_datA$yearc = as.factor(plant_datA$year)
 
+#standardize variables
 plant_datA$DOYs = scale(plant_datA$DOY, center = TRUE, scale = TRUE)[,1]
-#polynomial term for DOY, no need to standardize to avoid distortion of polynomial relationship,
-#and interfere interpretability of interaction terms
 plant_datA$DOYsqs=plant_datA$DOYs^2
 
+#polynomial term for DOY, no need to standardize to avoid distortion of polynomial relationship,
+#and interfere interpretability of interaction terms
+
+write.csv(plant_datA, "plant_datA.csv")

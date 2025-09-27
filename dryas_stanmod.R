@@ -1,13 +1,15 @@
 library(cmdstanr)
 library(dplyr)
+library(ggplot2)
+library(ggpubr)
 
 # restructure data
-file_path="C:\\pdumandanSLU\\PatD-SLU\\SLU\\phenology-project\\ZackPhen"
-dat_name=paste(file_path, '\\plant_datA','.csv', sep = '')
+dat_path="C:\\pdumandanSLU\\PatD-SLU\\SLU\\phenology-project\\ZackPhen\\data"
+dat_name=paste(dat_path, '\\plant_datA','.csv', sep = '')
 
 plant_datA=read.csv(dat_name, header=T, sep=',',  stringsAsFactors = F)
 
-dry_datA <- plant_datA %>%filter(species=="Dryas")
+dry_datA <- plant_datA%>%filter(species=="Dryas")
 
 dryas_data <- list(
   N = nrow(dry_datA),
@@ -25,7 +27,7 @@ dryas_data <- list(
 )
 
 #compile model
-plant_mod=cmdstan_model("pheno_quad.stan")
+plant_mod=cmdstan_model("plant_phen.stan")
 
 #fit model
 dry_mod <- plant_mod$sample(
@@ -41,7 +43,7 @@ dry_mod <- plant_mod$sample(
 
 dry_draws <- dry_mod$draws(format="df", variables="y_pred")
 y_pred_matrix <- as.data.frame(dry_draws)
-y_pred_matrix=y_pred_matrix[,-1164:-1166]
+y_pred_matrix=y_pred_matrix[,-1158:-1160]
 
 y_pred_mean <- apply(y_pred_matrix, MARGIN=2, mean) #margin=2 is column mean
 y_pred_lower <- apply(y_pred_matrix, MARGIN=2, quantile, probs = 0.025)
@@ -222,7 +224,7 @@ dryas_curve=ggplot(summary_ct, aes(x = year, y = mean, col=as.factor(year))) +
     x = "Year",
     y = "curvature (beta_DOYsqs)",
     caption = "Mean and 90% CI")+
-  theme_classic()+ylim(-5,2.5)
+  theme_classic()+ylim(min(summary_ct$lower), max(summary_ct$upper))
 
 dry_res=ggarrange(dryas_peak, dryas_slope, dryas_curve, nrow=1, ncol=3)
 annotate_figure(dry_res, top = text_grob("Dryas", face = "bold", size = 20))

@@ -25,7 +25,7 @@ sal_data <- list(
 )
 
 #compile model
-plant_mod=cmdstan_model("pheno_quad.stan")
+plant_mod=cmdstan_model("plant_phen.stan")
 
 #fit model
 sal_mod <- plant_mod$sample(
@@ -34,14 +34,13 @@ sal_mod <- plant_mod$sample(
   chains = 4,
   parallel_chains = 4,
   iter_sampling = 2000,
-  iter_warmup = 500
-)
+  iter_warmup = 500)
 
 #predictions
 
 sal_draws <- sal_mod$draws(format="df", variables="y_pred")
 sal_pred_matrix <- as.data.frame(sal_draws)
-sal_pred_matrix=sal_pred_matrix[,-962:-964]
+sal_pred_matrix=sal_pred_matrix[,-939:-941]
 
 sal_pred_mean <- apply(sal_pred_matrix, MARGIN=2, mean) #margin=2 is column mean
 sal_pred_lower <- apply(sal_pred_matrix, MARGIN=2, quantile, probs = 0.025)

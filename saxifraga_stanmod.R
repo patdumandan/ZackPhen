@@ -25,7 +25,7 @@ sax_data <- list(
 )
 
 #compile model
-plant_mod=cmdstan_model("pheno_quad.stan")
+plant_mod=cmdstan_model("plant_phen.stan")
 
 #fit model
 sax_mod <- plant_mod$sample(
@@ -41,7 +41,7 @@ sax_mod <- plant_mod$sample(
 
 sax_draws <- sax_mod$draws(format="df", variables="y_pred")
 sax_pred_matrix <- as.data.frame(sax_draws)
-sax_pred_matrix=sax_pred_matrix[,-593:-595]
+sax_pred_matrix=sax_pred_matrix[,-291:-293]
 
 sax_pred_mean <- apply(sax_pred_matrix, MARGIN=2, mean) #margin=2 is column mean
 sax_pred_lower <- apply(sax_pred_matrix, MARGIN=2, quantile, probs = 0.025)
