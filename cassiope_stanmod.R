@@ -216,12 +216,12 @@ casfitted_curves=generate_fitted_curves(casnyr, casalpha_mean, casbeta_DOYs_mean
                                         casbeta_DOYsqs_mean,DOY_std, DOY_sq_std, DOY_seq, casyr_lvls)
 
 
-casfitted_df=do.call(rbind, casfitted_curves)
+casfitted_df=do.call(rbind, casfitted_curves)%>%
+  mutate(year=as.factor(year))
 
 
-casp=ggplot(casfitted_df, aes(x=DOY, y=prob, col=as.factor(year)))+
+casp=ggplot(casfitted_df, aes(x=DOY, y=prob, col=year))+
   geom_line(linewidth=0.6, alpha=2)+theme_classic()+
   labs(x="DOY", y="P(flower)", title="Cassiope")+
   scale_color_viridis_d()+
   xlim(150,270)
-

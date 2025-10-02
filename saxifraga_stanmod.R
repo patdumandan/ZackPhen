@@ -59,20 +59,10 @@ saxdf_plot <- data.frame(
   upper = sax_pred_upper
 )%>%cbind(sax_datA)
 
-#to check weird years
-highlight_years <- c( "1998", "2018", "1997", "2014", "2015", "2020", "2021")
-
 ggplot(saxdf_plot, aes(x = DOY, y = pred_mean, group = year, col = as.factor(year))) +
   geom_line(linewidth = 0.6, alpha = 0.5) +  # default lines for all years
-  geom_line(data = subset(saxdf_plot, year %in% highlight_years),
-            aes(x = DOY, y = pred_mean, group = year, color = as.factor(year)),
-            linewidth = 1.2) +  # bold lines for highlighted years
   geom_point(aes(y = tot_F), size = 1.5) +  # points for observed data
   facet_wrap(~Plot) +
-  scale_color_manual(
-    values = c( "1998" = "orange", "2018"="red", "1997"= "blue", "2014"="green", "2015"="pink", "2020"="black", "2021"="violet"),
-    breaks = highlight_years,
-    guide = guide_legend(title = "Odd Years")) +
   theme_classic() +labs(
     title = "Predicted Flowering Curve per Year",
     y = "Predicted Flower Totals",
@@ -243,12 +233,12 @@ saxfitted_curves=generate_fitted_curves(saxnyr, saxalpha_mean, saxbeta_DOYs_mean
 
 incyears <- sort(unique(saxsummary_peak$year))
 
-saxfitted_df=do.call(rbind, saxfitted_curves)%>%filter(year %in% incyears)
+saxfitted_df=do.call(rbind, saxfitted_curves)%>%filter(year %in% incyears)%>%
+  mutate(year=as.factor(year))
 
 
-saxp=ggplot(saxfitted_df, aes(x=DOY, y=prob, col=as.factor(year)))+
+saxp=ggplot(saxfitted_df, aes(x=DOY, y=prob, col=year))+
   geom_line(linewidth=0.6, alpha=2)+theme_classic()+
   labs(x="DOY", y="P(flower)", title="Saxifraga")+
   scale_color_viridis_d()+
   xlim(150,270)
-

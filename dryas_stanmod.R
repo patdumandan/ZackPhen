@@ -112,9 +112,7 @@ summary_peak <- peak_df |>
     median= median(DOY_peak),
     lower= quantile(DOY_peak, 0.05),
     upper= quantile(DOY_peak, 0.95)
-  )%>%
-  mutate(
-    highlight_group = ifelse(year %in% highlight_years, as.character(year), "Other"))
+  )%>%filter(!(mean<=150 | lower<=150| upper<=150))
 
 print(summary_peak)
 
@@ -228,3 +226,38 @@ dryas_curve=ggplot(summary_ct, aes(x = year, y = mean, col=as.factor(year))) +
 
 dry_res=ggarrange(dryas_peak, dryas_slope, dryas_curve, nrow=1, ncol=3)
 annotate_figure(dry_res, top = text_grob("Dryas", face = "bold", size = 20))
+
+#posterior preds of phenological curves
+
+source("C:\\pdumandanSLU\\PatD-SLU\\SLU\\phenology-project\\ZackPhen\\plant_functions.R")
+
+dry_res=as_draws_df(dry_mod$draws())
+dryyr_lvls=sort(unique(dry_datA$year))
+names(dryyr_lvls)=1:length(dryyr_lvls)
+
+dryalpha_mean=dry_res%>%summarise(alpha=mean(alpha))%>%as.numeric(alpha)
+drybeta_DOYs_mean=dry_res%>%summarise(across(starts_with("beta_DOYs["), mean))%>%unlist()
+drybeta_DOYsqs_mean=dry_res%>%summarise(across(starts_with("beta_DOYsqs["), mean))%>%unlist()
+
+DOY_mean=mean(plant_datA$DOY)
+DOY_sd=sd(plant_datA$DOY)
+DOY_seq=seq(150, 270, by=1)
+DOY_std=(DOY_seq-DOY_mean)/DOY_sd
+DOY_sq_std=DOY_std^2
+n_DOY=length(DOY_std)
+drynyr=length(drybeta_DOYs_mean)
+
+dryfitted_curves=generate_fitted_curves(drynyr, dryalpha_mean, drybeta_DOYs_mean,
+                                        drybeta_DOYsqs_mean,DOY_std, DOY_sq_std, DOY_seq, dryyr_lvls)
+
+incyears <- sort(unique(summary_peak$year))
+
+dryfitted_df=do.call(rbind, dryfitted_curves)%>%filter(year %in% incyears)%>%
+  mutate(year=as.factor(year))
+
+
+dryp=ggplot(dryfitted_df, aes(x=DOY, y=prob, col=year))+
+  geom_line(linewidth=0.6, alpha=2)+theme_classic()+
+  labs(x="DOY", y="P(flower)", title="Dryas")+
+  scale_color_viridis_d()+
+  xlim(150,270)

@@ -60,19 +60,11 @@ sildf_plot <- data.frame(
 )%>%cbind(sil_datA)
 
 #to check weird years
-highlight_years <- c( "1998", "2018", "1997", "2014", "2015", "2020", "2021")
 
 ggplot(sildf_plot, aes(x = DOY, y = pred_mean, group = year, col = as.factor(year))) +
   geom_line(linewidth = 0.6, alpha = 0.5) +  # default lines for all years
-  geom_line(data = subset(sildf_plot, year %in% highlight_years),
-            aes(x = DOY, y = pred_mean, group = year, color = as.factor(year)),
-            linewidth = 1.2) +  # bold lines for highlighted years
   geom_point(aes(y = tot_F), size = 1.5) +  # points for observed data
   facet_wrap(~Plot) +
-  scale_color_manual(
-    values = c( "1998" = "orange", "2018"="red", "1997"= "blue", "2014"="green", "2015"="pink", "2020"="black", "2021"="violet"),
-    breaks = highlight_years,
-    guide = guide_legend(title = "Odd Years")) +
   theme_classic() +labs(
     title = "Predicted Flowering Curve per Year",
     y = "Predicted Flower Totals",
@@ -243,10 +235,11 @@ silfitted_curves=generate_fitted_curves(silnyr, silalpha_mean, silbeta_DOYs_mean
 
 incyears <- sort(unique(silsummary_peak$year))
 
-silfitted_df=do.call(rbind, silfitted_curves)%>%filter(year %in% incyears)
+silfitted_df=do.call(rbind, silfitted_curves)%>%filter(year %in% incyears)%>%
+  mutate(year=as.factor(year))
 
 
-silp=ggplot(silfitted_df, aes(x=DOY, y=prob, col=as.factor(year)))+
+silp=ggplot(silfitted_df, aes(x=DOY, y=prob, col=year))+
   geom_line(linewidth=0.6, alpha=2)+theme_classic()+
   labs(x="DOY", y="P(flower)", title="Silene")+
   scale_color_viridis_d()+
