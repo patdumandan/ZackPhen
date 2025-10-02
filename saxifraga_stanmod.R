@@ -107,9 +107,7 @@ saxsummary_peak <- saxpeak_df |>
     median= median(DOY_peak),
     lower= quantile(DOY_peak, 0.05),
     upper= quantile(DOY_peak, 0.95)
-  )%>%
-  mutate(
-    highlight_group = ifelse(year %in% highlight_years, as.character(year), "Other"))
+  )%>%filter(!(mean<=150 | lower<=150| upper<=150))
 
 print(saxsummary_peak)
 
@@ -219,3 +217,38 @@ sax_curve=ggplot(saxsummary_ct, aes(x = year, y = mean, col=as.factor(year))) +
 
 sax_res=ggarrange(sax_peak, sax_slope, sax_curve, nrow=1, ncol=3)
 annotate_figure(sax_res, top = text_grob("Saxifraga", face = "bold", size = 20))
+
+#posterior preds of phenological curves
+
+source("C:\\pdumandanSLU\\PatD-SLU\\SLU\\phenology-project\\ZackPhen\\plant_functions.R")
+
+sax_res=as_draws_df(sax_mod$draws())
+saxyr_lvls=sort(unique(sax_datA$year))
+names(saxyr_lvls)=1:length(saxyr_lvls)
+
+saxalpha_mean=sax_res%>%summarise(alpha=mean(alpha))%>%as.numeric(alpha)
+saxbeta_DOYs_mean=sax_res%>%summarise(across(starts_with("beta_DOYs["), mean))%>%unlist()
+saxbeta_DOYsqs_mean=sax_res%>%summarise(across(starts_with("beta_DOYsqs["), mean))%>%unlist()
+
+DOY_mean=mean(plant_datA$DOY)
+DOY_sd=sd(plant_datA$DOY)
+DOY_seq=seq(150, 270, by=1)
+DOY_std=(DOY_seq-DOY_mean)/DOY_sd
+DOY_sq_std=DOY_std^2
+n_DOY=length(DOY_std)
+saxnyr=length(saxbeta_DOYs_mean)
+
+saxfitted_curves=generate_fitted_curves(saxnyr, saxalpha_mean, saxbeta_DOYs_mean,
+                                        saxbeta_DOYsqs_mean,DOY_std, DOY_sq_std, DOY_seq, saxyr_lvls)
+
+incyears <- sort(unique(saxsummary_peak$year))
+
+saxfitted_df=do.call(rbind, saxfitted_curves)%>%filter(year %in% incyears)
+
+
+saxp=ggplot(saxfitted_df, aes(x=DOY, y=prob, col=as.factor(year)))+
+  geom_line(linewidth=0.6, alpha=2)+theme_classic()+
+  labs(x="DOY", y="P(flower)", title="Saxifraga")+
+  scale_color_viridis_d()+
+  xlim(150,270)
+

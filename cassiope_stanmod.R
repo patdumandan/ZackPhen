@@ -2,8 +2,8 @@ library(cmdstanr)
 library(dplyr)
 
 # restructure data
-file_path="C:\\pdumandanSLU\\PatD-SLU\\SLU\\phenology-project\\ZackPhen\\raw"
-dat_name=paste(file_path, '\\plant_datA','.csv', sep = '')
+full_file="C:\\pdumandanSLU\\PatD-SLU\\SLU\\phenology-project\\ZackPhen\\data"
+dat_name=paste(full_file, '\\plant_datA','.csv', sep = '')
 
 plant_datA=read.csv(dat_name, header=T, sep=',',  stringsAsFactors = F)
 
@@ -60,23 +60,14 @@ casdf_plot <- data.frame(
 )%>%cbind(cas_datA)
 
 #to check weird years
-highlight_years <- c( "1998", "2018", "1997", "2014", "2015", "2020", "2021")
 
 ggplot(casdf_plot, aes(x = DOY, y = pred_mean, group = year, col = as.factor(year))) +
-  geom_line(linewidth = 0.6, alpha = 0.5) +  # default lines for all years
-  geom_line(data = subset(casdf_plot, year %in% highlight_years),
-            aes(x = DOY, y = pred_mean, group = year, color = as.factor(year)),
-            linewidth = 1.2) +  # bold lines for highlighted years
+  geom_line(linewidth = 0.6, alpha = 0.5) +
   geom_point(aes(y = tot_F), size = 1.5) +  # points for observed data
   facet_wrap(~Plot) +
-  scale_color_manual(
-    values = c( "1998" = "orange", "2018"="red", "1997"= "blue", "2014"="green", "2015"="pink", "2020"="black", "2021"="violet"),
-    breaks = highlight_years,
-    guide = guide_legend(title = "Odd Years")) +
-  theme_classic() +labs(
-    title = "Predicted Flowering Curve per Year",
-    y = "Predicted Flower Totals",
-    color = "Year")
+  theme_classic() +
+  labs(title = "Predicted Flowering Curve per Year",y = "Predicted Flower Totals",
+       color = "Year")
 
 #extract peak DOY
 
@@ -106,36 +97,16 @@ cassummary_peak <- caspeak_df |>
     mean  = mean(DOY_peak),
     median= median(DOY_peak),
     lower= quantile(DOY_peak, 0.05),
-    upper= quantile(DOY_peak, 0.95)
-  )%>%
-  mutate(
-    highlight_group = ifelse(year %in% highlight_years, as.character(year), "Other"))
+    upper= quantile(DOY_peak, 0.95))%>%
+  filter(!mean==150 & !lower==150 & !upper==150)
 
 print(cassummary_peak)
 
-# #HPDI
-# require(bayestestR)
-#
-# summary_peak_hpdi <- peak_df |>
-#   group_by(year) |>
-#   summarise(
-#     median = median(DOY_peak),
-#     hpdi = list(hdi(DOY_peak, ci = 0.90)))%>% # hdi() returns a data frame
-#    mutate(
-#     highlight_group = ifelse(year %in% highlight_years, as.character(year), "Other"))%>%
-#   unnest_wider(hpdi)  # expands the "hdi" list column into lower/upper
-
-# visualise
 cas_peak=ggplot(cassummary_peak, aes(x = year, y = mean, col=as.factor(year))) +
-  geom_line(data = subset(cassummary_peak, year %in% highlight_years),
-            aes(x = year, y = median, group = year, color = as.factor(year)),
-            linewidth = 1.2) +  # bold lines for highlighted years
+  geom_line(linewidth = 0.6, alpha = 0.5) +
   geom_point(size = 2) +
   geom_errorbar(aes(ymin = lower, ymax = upper), width = 0.3) +
-  scale_color_manual(
-    values = c( "1998" = "orange", "2018"="red", "1997"= "blue", "2014"="green", "2015"="pink", "2020"="black", "2021"="violet"),
-    breaks = highlight_years,
-    guide = guide_legend(title = "Odd Years")) +labs(
+ labs(
     title = "peak timing",
     x = "Year",
     y = "Peak Day of Year (DOY)",
@@ -219,3 +190,38 @@ cas_curve=ggplot(cassummary_ct, aes(x = year, y = mean, col=as.factor(year))) +
 
 cas_res=ggarrange(cas_peak, cas_slope, cas_curve, nrow=1, ncol=3)
 annotate_figure(cas_res, top = text_grob("Cassiope", face = "bold", size = 20))
+
+#posterior preds of phenological curves
+
+source("C:\\pdumandanSLU\\PatD-SLU\\SLU\\phenology-project\\ZackPhen\\plant_functions.R")
+
+cas_res=as_draws_df(cas_mod$draws())
+casyr_lvls=sort(unique(cas_datA$year))
+names(casyr_lvls)=1:length(casyr_lvls)
+
+
+casalpha_mean=cas_res%>%summarise(alpha=mean(alpha))%>%as.numeric(alpha)
+casbeta_DOYs_mean=cas_res%>%summarise(across(starts_with("beta_DOYs["), mean))%>%unlist()
+casbeta_DOYsqs_mean=cas_res%>%summarise(across(starts_with("beta_DOYsqs["), mean))%>%unlist()
+
+DOY_mean=mean(plant_datA$DOY)
+DOY_sd=sd(plant_datA$DOY)
+DOY_seq=seq(150, 270, by=1)
+DOY_std=(DOY_seq-DOY_mean)/DOY_sd
+DOY_sq_std=DOY_std^2
+n_DOY=length(DOY_std)
+casnyr=length(casbeta_DOYs_mean)
+
+casfitted_curves=generate_fitted_curves(casnyr, casalpha_mean, casbeta_DOYs_mean,
+                                        casbeta_DOYsqs_mean,DOY_std, DOY_sq_std, DOY_seq, casyr_lvls)
+
+
+casfitted_df=do.call(rbind, casfitted_curves)
+
+
+casp=ggplot(casfitted_df, aes(x=DOY, y=prob, col=as.factor(year)))+
+  geom_line(linewidth=0.6, alpha=2)+theme_classic()+
+  labs(x="DOY", y="P(flower)", title="Cassiope")+
+  scale_color_viridis_d()+
+  xlim(150,270)
+

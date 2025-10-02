@@ -105,10 +105,9 @@ salsummary_peak <- salpeak_df |>
     mean  = mean(DOY_peak),
     median= median(DOY_peak),
     lower= quantile(DOY_peak, 0.05),
-    upper= quantile(DOY_peak, 0.95)
-  )%>%
-  mutate(
-    highlight_group = ifelse(year %in% highlight_years, as.character(year), "Other"))
+    upper= quantile(DOY_peak, 0.95))%>%
+  filter(!(mean<=150 | lower<=150| upper<=150))
+
 
 print(salsummary_peak)
 
@@ -218,3 +217,37 @@ sal_curve=ggplot(salsummary_ct, aes(x = year, y = mean, col=as.factor(year))) +
 
 sal_res=ggarrange(sal_peak, sal_slope, sal_curve, nrow=1, ncol=3)
 annotate_figure(sal_res, top = text_grob("Salix", face = "bold", size = 20))
+
+#posterior preds of phenological curves
+
+source("C:\\pdumandanSLU\\PatD-SLU\\SLU\\phenology-project\\ZackPhen\\plant_functions.R")
+
+sal_res=as_draws_df(sal_mod$draws())
+salyr_lvls=sort(unique(sal_datA$year))
+names(salyr_lvls)=1:length(salyr_lvls)
+
+salalpha_mean=sal_res%>%summarise(alpha=mean(alpha))%>%as.numeric(alpha)
+salbeta_DOYs_mean=sal_res%>%summarise(across(starts_with("beta_DOYs["), mean))%>%unlist()
+salbeta_DOYsqs_mean=sal_res%>%summarise(across(starts_with("beta_DOYsqs["), mean))%>%unlist()
+
+DOY_mean=mean(plant_datA$DOY)
+DOY_sd=sd(plant_datA$DOY)
+DOY_seq=seq(150, 270, by=1)
+DOY_std=(DOY_seq-DOY_mean)/DOY_sd
+DOY_sq_std=DOY_std^2
+n_DOY=length(DOY_std)
+salnyr=length(salbeta_DOYs_mean)
+
+salfitted_curves=generate_fitted_curves(salnyr, salalpha_mean, salbeta_DOYs_mean,
+                                        salbeta_DOYsqs_mean,DOY_std, DOY_sq_std, DOY_seq, salyr_lvls)
+
+incyears <- sort(unique(salsummary_peak$year))
+
+salfitted_df=do.call(rbind, salfitted_curves)%>%filter(year %in% incyears)
+
+
+salp=ggplot(salfitted_df, aes(x=DOY, y=prob, col=as.factor(year)))+
+  geom_line(linewidth=0.6, alpha=2)+theme_classic()+
+  labs(x="DOY", y="P(flower)", title="Salix")+
+  scale_color_viridis_d()+
+  xlim(150,270)

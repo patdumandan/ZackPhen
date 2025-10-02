@@ -2,7 +2,7 @@ library(cmdstanr)
 library(dplyr)
 
 # restructure data
-file_path="C:\\pdumandanSLU\\PatD-SLU\\SLU\\phenology-project\\ZackPhen"
+file_path="C:\\pdumandanSLU\\PatD-SLU\\SLU\\phenology-project\\ZackPhen\\data"
 dat_name=paste(file_path, '\\plant_datA','.csv', sep = '')
 
 plant_datA=read.csv(dat_name, header=T, sep=',',  stringsAsFactors = F)
@@ -25,7 +25,7 @@ sil_data <- list(
 )
 
 #compile model
-plant_mod=cmdstan_model("pheno_quad.stan")
+plant_mod=cmdstan_model("plant_phen.stan")
 
 #fit model
 sil_mod <- plant_mod$sample(
@@ -41,7 +41,7 @@ sil_mod <- plant_mod$sample(
 
 sil_draws <- sil_mod$draws(format="df", variables="y_pred")
 sil_pred_matrix <- as.data.frame(sil_draws)
-sil_pred_matrix=sil_pred_matrix[,-1107:-1109]
+sil_pred_matrix=sil_pred_matrix[,-1093:-1095]
 
 sil_pred_mean <- apply(sil_pred_matrix, MARGIN=2, mean) #margin=2 is column mean
 sil_pred_lower <- apply(sil_pred_matrix, MARGIN=2, quantile, probs = 0.025)
@@ -107,9 +107,7 @@ silsummary_peak <- silpeak_df |>
     median= median(DOY_peak),
     lower= quantile(DOY_peak, 0.05),
     upper= quantile(DOY_peak, 0.95)
-  )%>%
-  mutate(
-    highlight_group = ifelse(year %in% highlight_years, as.character(year), "Other"))
+  )%>%filter(!(mean==150 | lower==150| upper==150))
 
 print(silsummary_peak)
 
@@ -219,3 +217,38 @@ sil_curve=ggplot(silsummary_ct, aes(x = year, y = mean, col=as.factor(year))) +
 
 sil_res=ggarrange(sil_peak, sil_slope, sil_curve, nrow=1, ncol=3)
 annotate_figure(sil_res, top = text_grob("Silene", face = "bold", size = 20))
+
+#posterior preds of phenological curves
+
+source("C:\\pdumandanSLU\\PatD-SLU\\SLU\\phenology-project\\ZackPhen\\plant_functions.R")
+
+sil_res=as_draws_df(sil_mod$draws())
+silyr_lvls=sort(unique(sil_datA$year))
+names(silyr_lvls)=1:length(silyr_lvls)
+
+silalpha_mean=sil_res%>%summarise(alpha=mean(alpha))%>%as.numeric(alpha)
+silbeta_DOYs_mean=sil_res%>%summarise(across(starts_with("beta_DOYs["), mean))%>%unlist()
+silbeta_DOYsqs_mean=sil_res%>%summarise(across(starts_with("beta_DOYsqs["), mean))%>%unlist()
+
+DOY_mean=mean(plant_datA$DOY)
+DOY_sd=sd(plant_datA$DOY)
+DOY_seq=seq(150, 270, by=1)
+DOY_std=(DOY_seq-DOY_mean)/DOY_sd
+DOY_sq_std=DOY_std^2
+n_DOY=length(DOY_std)
+silnyr=length(silbeta_DOYs_mean)
+
+silfitted_curves=generate_fitted_curves(silnyr, silalpha_mean, silbeta_DOYs_mean,
+                                        silbeta_DOYsqs_mean,DOY_std, DOY_sq_std, DOY_seq, silyr_lvls)
+
+incyears <- sort(unique(silsummary_peak$year))
+
+silfitted_df=do.call(rbind, silfitted_curves)%>%filter(year %in% incyears)
+
+
+silp=ggplot(silfitted_df, aes(x=DOY, y=prob, col=as.factor(year)))+
+  geom_line(linewidth=0.6, alpha=2)+theme_classic()+
+  labs(x="DOY", y="P(flower)", title="Silene")+
+  scale_color_viridis_d()+
+  xlim(150,270)
+
