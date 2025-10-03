@@ -7,8 +7,10 @@ require(tidyr)
 require(reshape2)
 require(readr)
 
-arth_raw_dat=read.table("L:\\My Drive\\SLU\\phenology-project\\GEM-datasets\\Arthropod emergence_10.17897_V285-Z265\\Arthropod emergence_10.17897_V285-Z265_data.txt",
-                      sep="\t", header=T)
+file_path="C:\\pdumandanSLU\\PatD-SLU\\SLU\\phenology-project\\ZackPhen\\data\\raw"
+
+arth_name=paste(file_path, '\\Arthropod emergence_10.17897_V285-Z265_data','.txt', sep = '')
+arth_raw_dat=read.csv(arth_name, header=T, sep='\t',  stringsAsFactors = F)
 
 #date-time manipulation
 
@@ -185,7 +187,8 @@ arth_raw_data2 <- rbind(arth_raw_data2,Mites2)
 arth_raw_data2 <- rbind(arth_raw_data2,Lycosids2)
 
 arth_raw_data <- arth_raw_data2
-#write.csv(arth_raw_data, "arth_raw_dat.csv")
+
+#write.csv(arth_raw_data, "arth_dat_clean.csv")
 
 # ### Calculate CatchPerTrapDay per trap per census per year ####
 # arth_raw_dat_full<- plyr::ddply(arth_raw_data, c("Year","Plot.ID","DOY","HoyeTaxon"), summarise,
