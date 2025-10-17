@@ -1,32 +1,69 @@
-# Load necessary libraries
+# Load libraries
 library(ggplot2)
 library(dplyr)
 
-# Create data for the three scenarios
-scenarios <- data.frame(
-  Scenario = rep(c("Scenario 1: Matched timing", "Scenario 2: Prolonged activity duration, higher overlap",
-                   "Scenario 3: Shortened activity duration: lower overlap"), each = 2),
-  Population = rep(c("Consumer", "Resource"), 3),
-  Start_Date = c(50, 50,   # Scenario 1: Both consumer and resource start at day 50
-                 50, 40,   # Scenario 2: Resource starts earlier (day 40)
-                 50, 60),  # Scenario 3: Resource starts later (day 60)
-  End_Date = c(150, 150,   # Scenario 1: Both end at day 150
-               150, 170,   # Scenario 2: Resource ends later (day 170)
-               150, 130)   # Scenario 3: Resource ends earlier (day 130)
-)
+# Function to generate Gaussian phenology curve
+phenology_curve <- function(DOY, peak, spread, amplitude = 1) {
+  amplitude * exp(-((DOY - peak)^2) / (2 * spread^2))
+}
 
-# Add a column for color-coding
-scenarios$Color <- ifelse(scenarios$Population == "Consumer", "Consumer", "Resource")
+# Function to compute overlap
+compute_overlap <- function(resource, consumer) {
+  pmin(resource, consumer)
+}
 
-# Create the ggplot
-ggplot(scenarios, aes(x = Start_Date, xend = End_Date, y = Population,
-                       color=Color)) +
-  geom_segment(size = 4) +
-  theme_minimal() +
-  labs(title = "Phenology of Consumer and Resource Populations in Different Scenarios",
-       x = "Day of Year",
-       y = "Scenario",
-       color = "Population") + facet_wrap(~Scenario, ncol=1, nrow=3)+
-  theme(axis.text.y = element_text(size = 12), axis.text.x = element_blank(),
-        axis.title = element_text(size = 14),
-        plot.title = element_text(hjust = 0.5, size = 16))
+# Set DOY range
+DOY <- 1:365
+
+# Base resource parameters
+resource_peak <- 150
+resource_spread <- 20
+resource <- phenology_curve(DOY, resource_peak, resource_spread)
+
+# Parameter grid for consumer
+timing_shifts <- c(-20, 0, 20)         # earlier, aligned, later
+consumer_spreads <- c(10, 20, 40)      # narrow, normal, wide
+
+# Create all combinations
+params <- expand.grid(timing_shift = timing_shifts,
+                      consumer_spread = consumer_spreads)
+
+# Generate long-format data for plotting
+plot_data <- data.frame()
+
+for (i in 1:nrow(params)) {
+  shift <- params$timing_shift[i]
+  spread <- params$consumer_spread[i]
+
+  consumer <- phenology_curve(DOY, resource_peak + shift, spread)
+  overlap <- compute_overlap(resource, consumer)
+
+  df <- data.frame(
+    DOY = rep(DOY, 3),
+    value = c(resource, consumer, overlap),
+    type = rep(c("Resource", "Consumer", "Overlap"), each = length(DOY)),
+    timing_shift = shift,
+    consumer_spread = spread
+  )
+
+  plot_data <- rbind(plot_data, df)
+}
+
+# Convert factors for facet labels with descriptive names
+plot_data$timing_shift <- factor(plot_data$timing_shift,
+                                 levels = c(-20, 0, 20),
+                                 labels = c("earlier", "no change", "later"))
+
+plot_data$consumer_spread <- factor(plot_data$consumer_spread,
+                                    levels = c(10, 20, 40),
+                                    labels = c("narrower", "no change", "broader"))
+
+# Plot phenology curves with overlap shaded
+ggplot(plot_data, aes(x = DOY, y = value, color = type, fill = type)) +
+  geom_line(size = 1) +
+  geom_area(data = subset(plot_data, type == "Overlap"), alpha = 0.4, fill = "grey") +
+  scale_color_manual(values = c("Resource" = "navyblue", "Consumer" = "gold")) +
+  facet_grid(consumer_spread ~ timing_shift) +
+  labs(x = "Day of Year (DOY)", y = "Phenology Intensity") +
+  theme_classic() +
+  theme(legend.position = "bottom")
