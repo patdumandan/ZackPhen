@@ -54,7 +54,7 @@ dryoverlap_df <- dry_fc %>%
 dryoverlap_df$year <- factor(dryoverlap_df$year, levels = sort(as.numeric(levels(dryoverlap_df$year))))
 
 dryo=ggplot(dryoverlap_df, aes(x = year, y = overlap, color = taxon, group = taxon)) +
-  geom_line(size = 1) +
+  geom_smooth(method="lm") +
   geom_point(size = 2) +
   theme_classic() +
   labs(title = "Trend of Phenological Overlap with Dryas Over Time",
@@ -142,10 +142,11 @@ casoverlap_df <- cas_fc %>%
   group_by(taxon, year) %>%
   summarise(overlap = sum(pmin(prob_norm, prob_cas), na.rm = TRUE)) %>%
   ungroup()
+
 casoverlap_df$year <- factor(casoverlap_df$year, levels = sort(as.numeric(levels(casoverlap_df$year))))
 
 caso=ggplot(casoverlap_df, aes(x = year, y = overlap, color = taxon, group = taxon)) +
-  geom_line(size = 1) +
+  geom_smooth(method="lm") +
   geom_point(size = 2) +
   theme_classic() +
   labs(title = "Trend of Phenological Overlap with Cassiope Over Time",
@@ -226,7 +227,7 @@ papoverlap_df <- pap_fc %>%
 papoverlap_df$year <- factor(papoverlap_df$year, levels = sort(as.numeric(levels(papoverlap_df$year))))
 
 papo=ggplot(papoverlap_df, aes(x = year, y = overlap, color = taxon, group = taxon)) +
-  geom_line(size = 1) +
+  geom_smooth(method="lm") +
   geom_point(size = 2) +
   theme_classic() +
   labs(title = "Trend of Phenological Overlap with Papaver Over Time",
@@ -307,7 +308,7 @@ saloverlap_df <- sal_fc %>%
 saloverlap_df$year <- factor(saloverlap_df$year, levels = sort(as.numeric(levels(saloverlap_df$year))))
 
 salo=ggplot(saloverlap_df, aes(x = year, y = overlap, color = taxon, group = taxon)) +
-  geom_line(size = 1) +
+  geom_smooth(method="lm") +
   geom_point(size = 2) +
   theme_classic() +
   labs(title = "Trend of Phenological Overlap with Salix Over Time",
@@ -387,11 +388,12 @@ siloverlap_df <- sil_fc %>%
   group_by(taxon, year) %>%
   summarise(overlap = sum(pmin(prob_norm, prob_sil), na.rm = TRUE)) %>%
   ungroup()
+
 siloverlap_df$year <- factor(siloverlap_df$year, levels = sort(as.numeric(levels(siloverlap_df$year))))
 
 silo=ggplot(siloverlap_df, aes(x = year, y = overlap, color = taxon, group = taxon)) +
-  geom_line(size = 1) +
-  geom_point(size = 2) +
+  geom_smooth(method="lm") +
+  geom_point(size = 2)+
   theme_classic() +
   labs(title = "Trend of Phenological Overlap with Silene Over Time",
        x = "Year",
@@ -470,9 +472,11 @@ saxoverlap_df <- sax_fc %>%
   summarise(overlap = sum(pmin(prob_norm, prob_sax), na.rm = TRUE)) %>%
   ungroup()
 
+saxoverlap_df$year <- factor(saxoverlap_df$year, levels = sort(as.numeric(levels(saxoverlap_df$year))))
+
 saxo=ggplot(saxoverlap_df, aes(x = year, y = overlap, color = taxon, group = taxon)) +
-  geom_line(size = 1) +
-  geom_point(size = 2) +
+  geom_smooth(method="lm") +
+  geom_point(size = 2) +facet_wrap(~taxon)+
   theme_classic() +
   labs(title = "Trend of Phenological Overlap with Saxifraga Over Time",
        x = "Year",
