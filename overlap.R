@@ -43,7 +43,7 @@ dry_curves <- dry_fc %>% filter(taxon == "Dryas") %>% select(DOY, year, prob_nor
   rename(prob_dry = prob_norm)
 
 # Join with all other taxon by DOY and year
-overlap_df <- dry_fc %>%
+dryoverlap_df <- dry_fc %>%
   filter(taxon != "Dryas") %>%
   select(DOY, year, taxon, prob_norm) %>%
   left_join(dry_curves, by = c("DOY", "year")) %>%
@@ -51,12 +51,23 @@ overlap_df <- dry_fc %>%
   summarise(overlap = sum(pmin(prob_norm, prob_dry), na.rm = TRUE)) %>%
   ungroup()
 
-ggplot(overlap_df, aes(x = taxon, y = overlap, fill = as.factor(year))) +
-  geom_bar(stat = "identity", position = position_dodge(width = 0.8)) +
-  labs(title = "Phenological Overlap with Dryas",
-       x = "Species", y = "Overlap (Schoener's D)", fill = "Year") +
-  theme_classic()+
-  scale_fill_viridis_d()
+dryoverlap_df$year <- factor(dryoverlap_df$year, levels = sort(as.numeric(levels(dryoverlap_df$year))))
+
+dryo=ggplot(dryoverlap_df, aes(x = year, y = overlap, color = taxon, group = taxon)) +
+  geom_line(size = 1) +
+  geom_point(size = 2) +
+  theme_classic() +
+  labs(title = "Trend of Phenological Overlap with Dryas Over Time",
+       x = "Year",
+       y = "Overlap (Schoener's D)",
+       color = "Taxon") +
+  scale_color_viridis_d() +  # colorblind-friendly palette
+  theme(axis.text.x = element_text(angle = 90, hjust = 1),
+        legend.position = "right",
+        legend.title = element_text(size = 12),
+        legend.text = element_text(size = 10))+
+  facet_wrap(~taxon)
+
 
 #fitted cirves overlay
 library(dplyr)
@@ -124,21 +135,29 @@ cas_curves <- cas_fc %>% filter(taxon == "Cassiope") %>% select(DOY, year, prob_
   rename(prob_cas = prob_norm)
 
 # Join with all other taxon by DOY and year
-overlap_df <- cas_fc %>%
+casoverlap_df <- cas_fc %>%
   filter(taxon != "Cassiope") %>%
   select(DOY, year, taxon, prob_norm) %>%
   left_join(cas_curves, by = c("DOY", "year")) %>%
   group_by(taxon, year) %>%
   summarise(overlap = sum(pmin(prob_norm, prob_cas), na.rm = TRUE)) %>%
   ungroup()
+casoverlap_df$year <- factor(casoverlap_df$year, levels = sort(as.numeric(levels(casoverlap_df$year))))
 
-ggplot(overlap_df, aes(x = taxon, y = overlap, fill = as.factor(year))) +
-  geom_bar(stat = "identity", position = position_dodge(width = 0.8)) +
-  labs(title = "Phenological Overlap with Cassiope",
-       x = "Species", y = "Overlap (Schoener's D)", fill = "Year") +
-  theme_classic()+
-  scale_fill_viridis_d()
-
+caso=ggplot(casoverlap_df, aes(x = year, y = overlap, color = taxon, group = taxon)) +
+  geom_line(size = 1) +
+  geom_point(size = 2) +
+  theme_classic() +
+  labs(title = "Trend of Phenological Overlap with Cassiope Over Time",
+       x = "Year",
+       y = "Overlap (Schoener's D)",
+       color = "Taxon") +
+  scale_color_viridis_d() +  # colorblind-friendly palette
+  theme(axis.text.x = element_text(angle = 90, hjust = 1),
+        legend.position = "right",
+        legend.title = element_text(size = 12),
+        legend.text = element_text(size = 10))+
+  facet_wrap(~taxon)
 # Prepare Cassiope curves with appropriate columns
 cas_curves_prepped <- cas_curves %>%
   select(DOY, year, prob_cas) %>%
@@ -196,7 +215,7 @@ pap_curves <- pap_fc %>% filter(taxon == "Papaver") %>% select(DOY, year, prob_n
   rename(prob_pap = prob_norm)
 
 # Join with all other taxon by DOY and year
-overlap_df <- pap_fc %>%
+papoverlap_df <- pap_fc %>%
   filter(taxon != "Papaver") %>%
   select(DOY, year, taxon, prob_norm) %>%
   left_join(pap_curves, by = c("DOY", "year")) %>%
@@ -204,13 +223,22 @@ overlap_df <- pap_fc %>%
   summarise(overlap = sum(pmin(prob_norm, prob_pap), na.rm = TRUE)) %>%
   ungroup()
 
-ggplot(overlap_df, aes(x = taxon, y = overlap, fill = as.factor(year))) +
-  geom_bar(stat = "identity", position = position_dodge(width = 0.8)) +
-  labs(title = "Phenological Overlap with Papaver",
-       x = "Species", y = "Overlap (Schoener's D)", fill = "Year") +
-  theme_classic()+
-  scale_fill_viridis_d()
+papoverlap_df$year <- factor(papoverlap_df$year, levels = sort(as.numeric(levels(papoverlap_df$year))))
 
+papo=ggplot(papoverlap_df, aes(x = year, y = overlap, color = taxon, group = taxon)) +
+  geom_line(size = 1) +
+  geom_point(size = 2) +
+  theme_classic() +
+  labs(title = "Trend of Phenological Overlap with Papaver Over Time",
+       x = "Year",
+       y = "Overlap (Schoener's D)",
+       color = "Taxon") +
+  scale_color_viridis_d() +  # colorblind-friendly palette
+  theme(axis.text.x = element_text(angle = 90, hjust = 1),
+        legend.position = "right",
+        legend.title = element_text(size = 12),
+        legend.text = element_text(size = 10))+
+  facet_wrap(~taxon)
 # Prepare Papaver curves with appropriate columns
 pap_curves_prepped <- pap_curves %>%
   select(DOY, year, prob_pap) %>%
@@ -268,7 +296,7 @@ sal_curves <- sal_fc %>% filter(taxon == "Salix") %>% select(DOY, year, prob_nor
   rename(prob_sal = prob_norm)
 
 # Join with all other taxon by DOY and year
-overlap_df <- sal_fc %>%
+saloverlap_df <- sal_fc %>%
   filter(taxon != "Salix") %>%
   select(DOY, year, taxon, prob_norm) %>%
   left_join(sal_curves, by = c("DOY", "year")) %>%
@@ -276,12 +304,23 @@ overlap_df <- sal_fc %>%
   summarise(overlap = sum(pmin(prob_norm, prob_sal), na.rm = TRUE)) %>%
   ungroup()
 
-ggplot(overlap_df, aes(x = taxon, y = overlap, fill = as.factor(year))) +
-  geom_bar(stat = "identity", position = position_dodge(width = 0.8)) +
-  labs(title = "Phenological Overlap with Salix",
-       x = "Species", y = "Overlap (Schoener's D)", fill = "Year") +
-  theme_classic()+
-  scale_fill_viridis_d()
+saloverlap_df$year <- factor(saloverlap_df$year, levels = sort(as.numeric(levels(saloverlap_df$year))))
+
+salo=ggplot(saloverlap_df, aes(x = year, y = overlap, color = taxon, group = taxon)) +
+  geom_line(size = 1) +
+  geom_point(size = 2) +
+  theme_classic() +
+  labs(title = "Trend of Phenological Overlap with Salix Over Time",
+       x = "Year",
+       y = "Overlap (Schoener's D)",
+       color = "Taxon") +
+  scale_color_viridis_d() +  # colorblind-friendly palette
+  theme(axis.text.x = element_text(angle = 90, hjust = 1),
+        legend.position = "right",
+        legend.title = element_text(size = 12),
+        legend.text = element_text(size = 10))+
+  facet_wrap(~taxon)
+
 
 # Prepare Salix curves with appropriate columns
 sal_curves_prepped <- sal_curves %>%
@@ -341,20 +380,30 @@ sil_curves <- sil_fc %>% filter(taxon == "Silene") %>% select(DOY, year, prob_no
   rename(prob_sil = prob_norm)
 
 # Join with all other taxon by DOY and year
-overlap_df <- sil_fc %>%
+siloverlap_df <- sil_fc %>%
   filter(taxon != "Silene") %>%
   select(DOY, year, taxon, prob_norm) %>%
   left_join(sil_curves, by = c("DOY", "year")) %>%
   group_by(taxon, year) %>%
   summarise(overlap = sum(pmin(prob_norm, prob_sil), na.rm = TRUE)) %>%
   ungroup()
+siloverlap_df$year <- factor(siloverlap_df$year, levels = sort(as.numeric(levels(siloverlap_df$year))))
 
-ggplot(overlap_df, aes(x = taxon, y = overlap, fill = as.factor(year))) +
-  geom_bar(stat = "identity", position = position_dodge(width = 0.8)) +
-  labs(title = "Phenological Overlap with Silene",
-       x = "Species", y = "Overlap (Schoener's D)", fill = "Year") +
-  theme_classic()+
-  scale_fill_viridis_d()
+silo=ggplot(siloverlap_df, aes(x = year, y = overlap, color = taxon, group = taxon)) +
+  geom_line(size = 1) +
+  geom_point(size = 2) +
+  theme_classic() +
+  labs(title = "Trend of Phenological Overlap with Silene Over Time",
+       x = "Year",
+       y = "Overlap (Schoener's D)",
+       color = "Taxon") +
+  scale_color_viridis_d() +  # colorblind-friendly palette
+  theme(axis.text.x = element_text(angle = 90, hjust = 1),
+        legend.position = "right",
+        legend.title = element_text(size = 12),
+        legend.text = element_text(size = 10))+
+  facet_wrap(~taxon)
+
 
 # Prepare Silene curves with appropriate columns
 sil_curves_prepped <- sil_curves %>%
@@ -413,7 +462,7 @@ sax_curves <- sax_fc %>% filter(taxon == "Saxifraga") %>% select(DOY, year, prob
   rename(prob_sax = prob_norm)
 
 # Join with all other taxon by DOY and year
-overlap_df <- sax_fc %>%
+saxoverlap_df <- sax_fc %>%
   filter(taxon != "Saxifraga") %>%
   select(DOY, year, taxon, prob_norm) %>%
   left_join(sax_curves, by = c("DOY", "year")) %>%
@@ -421,12 +470,19 @@ overlap_df <- sax_fc %>%
   summarise(overlap = sum(pmin(prob_norm, prob_sax), na.rm = TRUE)) %>%
   ungroup()
 
-ggplot(overlap_df, aes(x = taxon, y = overlap, fill = as.factor(year))) +
-  geom_bar(stat = "identity", position = position_dodge(width = 0.8)) +
-  labs(title = "Phenological Overlap with Saxifraga",
-       x = "Species", y = "Overlap (Schoener's D)", fill = "Year") +
-  theme_classic()+
-  scale_fill_viridis_d()
+saxo=ggplot(saxoverlap_df, aes(x = year, y = overlap, color = taxon, group = taxon)) +
+  geom_line(size = 1) +
+  geom_point(size = 2) +
+  theme_classic() +
+  labs(title = "Trend of Phenological Overlap with Saxifraga Over Time",
+       x = "Year",
+       y = "Overlap (Schoener's D)",
+       color = "Species") +
+  scale_color_viridis_d() +  # colorblind-friendly palette
+  theme(axis.text.x = element_text(angle = 90, hjust = 1),
+    legend.position = "right",
+    legend.title = element_text(size = 12),
+    legend.text = element_text(size = 10))
 
 # Prepare Saxifraga curves with appropriate columns
 sax_curves_prepped <- sax_curves %>%
@@ -469,6 +525,61 @@ ggplot(plot_df, aes(x = DOY, y = prob, color = species_curve, group = interactio
        y = "Normalized Probability",
        color = "Species") +
   theme(legend.position = "none")
+
+#combine subsets
+casoverlap_df <- cas_fc %>%
+  filter(taxon != "Cassiope") %>%
+  select(DOY, year, taxon, prob_norm) %>%
+  left_join(cas_curves, by = c("DOY", "year")) %>%
+  group_by(taxon, year) %>%
+  summarise(overlap = sum(pmin(prob_norm, prob_cas), na.rm = TRUE)) %>%
+  ungroup()
+
+dryoverlap_df <- dry_fc %>%
+  filter(taxon != "Dryas") %>%
+  select(DOY, year, taxon, prob_norm) %>%
+  left_join(dry_curves, by = c("DOY", "year")) %>%
+  group_by(taxon, year) %>%
+  summarise(overlap = sum(pmin(prob_norm, prob_dry), na.rm = TRUE)) %>%
+  ungroup()
+
+papoverlap_df <- pap_fc %>%
+  filter(taxon != "Papaver") %>%
+  select(DOY, year, taxon, prob_norm) %>%
+  left_join(pap_curves, by = c("DOY", "year")) %>%
+  group_by(taxon, year) %>%
+  summarise(overlap = sum(pmin(prob_norm, prob_pap), na.rm = TRUE)) %>%
+  ungroup()
+
+saloverlap_df <- sal_fc %>%
+  filter(taxon != "Salix") %>%
+  select(DOY, year, taxon, prob_norm) %>%
+  left_join(sal_curves, by = c("DOY", "year")) %>%
+  group_by(taxon, year) %>%
+  summarise(overlap = sum(pmin(prob_norm, prob_sal), na.rm = TRUE)) %>%
+  ungroup()
+
+siloverlap_df <- sil_fc %>%
+  filter(taxon != "Silene") %>%
+  select(DOY, year, taxon, prob_norm) %>%
+  left_join(sil_curves, by = c("DOY", "year")) %>%
+  group_by(taxon, year) %>%
+  summarise(overlap = sum(pmin(prob_norm, prob_sil), na.rm = TRUE)) %>%
+  ungroup()
+
+saxoverlap_df <- sax_fc %>%
+  filter(taxon != "Saxifraga") %>%
+  select(DOY, year, taxon, prob_norm) %>%
+  left_join(sax_curves, by = c("DOY", "year")) %>%
+  group_by(taxon, year) %>%
+  summarise(overlap = sum(pmin(prob_norm, prob_sax), na.rm = TRUE)) %>%
+  ungroup()
+
+all_overlap_df=do.call(rbind, list(casoverlap_df, dryoverlap_df,
+                                   papoverlap_df, saloverlap_df,
+                                   siloverlap_df,saxoverlap_df))
+
+all_overlap_df=as.data.frame(all_overlap_df)
 
 
 
