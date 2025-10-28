@@ -10,22 +10,14 @@ require(date)
 source("C:\\pdumandanSLU\\PatD-SLU\\SLU\\phenology-project\\ZackPhen\\plant_functions.R")
 
 silsummary_peak=silsummary_peak%>%mutate(species="Silene")
-salsummary_peak=salsummary_peak%>%mutate(species="Salix")
-saxsummary_peak=saxsummary_peak%>%mutate(species="Saxifraga")
+#salsummary_peak=salsummary_peak%>%mutate(species="Salix")
+#saxsummary_peak=saxsummary_peak%>%mutate(species="Saxifraga")
 papsummary_peak=papsummary_peak%>%mutate(species="Papaver")
 cassummary_peak=cassummary_peak%>%mutate(species="Cassiope")
-summary_peak=summary_peak%>%mutate(species="Dryas")
+drysummary_peak=summary_peak%>%mutate(species="Dryas")
 
-plant_phen_all=vctrs::vec_rbind(silsummary_peak, salsummary_peak,
-                                saxsummary_peak, papsummary_peak,
-                                cassummary_peak, summary_peak)%>%
-  select(-highlight_group)
-phen_dat_all=read.csv("M:\\My Drive\\SLU\\phenology-project\\ZackPhen\\ZAC_phenology_metrics_1996-2023.csv")
-
-dryas_dat=phen_dat_all%>%filter(Species=="Dryas", !Plot%in%c("Dry7", "Dry8"))%>%select(-1)
-
-dry10=dryas_dat%>%filter(metric==10)
-dry10$Plot=as.factor(dry10$Plot)
+plant_phen_all=vctrs::vec_rbind(silsummary_peak,papsummary_peak,
+                                cassummary_peak,drysummary_peak)
 
 #Dryas10%
 
@@ -38,10 +30,10 @@ for (nyr in seq(5,20, by=1)) {
 
   window_size <- nyr  # size of the sliding window
 
-  for (start in seq(1, nrow(summary_peak) - window_size + 1, by = step_size)) {
+  for (start in seq(1, nrow(drysummary_peak) - window_size + 1, by = step_size)) {
 
     end <- start + window_size - 1
-    dryp_5y_slide[[length(dryp_5y_slide) + 1]] <- summary_peak[start:end, ]
+    dryp_5y_slide[[length(dryp_5y_slide) + 1]] <- drysummary_peak[start:end, ]
 
   }
 }
@@ -291,5 +283,268 @@ paptsl=ggpubr::ggviolin(pap_peak_slope, x="start_yr", y="slope", add="jitter", c
   ggtitle("Papaver (peak)")+geom_hline(yintercept=0, lty=2)+
   theme(axis.text.x = element_text(angle = 90, hjust = 1))
 
-ggarrange(drytsl, castsl, siltsl, paptsl, common.legend = T)
+ggpubr::ggarrange(drytsl, castsl, siltsl, paptsl, common.legend = T)
 
+#muscid
+step_size=1
+musnyr=length(unique(mussummary_peak$year))
+
+muspp_5y_slide <- list()
+
+# Create sliding windows
+for (musnyr in seq(5,20, by=1)) {
+
+  window_size <- musnyr  # size of the sliding window
+
+  for (start in seq(1, nrow(mussummary_peak) - window_size + 1, by = step_size)) {
+
+    end <- start + window_size - 1
+    muspp_5y_slide[[length(muspp_5y_slide) + 1]] <- mussummary_peak[start:end, ]
+
+  }
+}
+
+#fit model
+increasing_mod=function(slide_list) {
+  lapply(slide_list, function(dat) {
+    slope <-as.numeric(coef(glm(mean ~ year, data = dat))[2])
+    return(slope)
+  })
+}
+
+musslopes_list <- increasing_mod(muspp_5y_slide)%>%unlist()
+
+#get data for plotting
+get_start_years <- function(slide_list) {
+  lapply(slide_list, function(df) {
+
+    start_year = as.numeric(min(df$year, na.rm = TRUE))
+    return(start_year)
+
+  })
+}
+
+get_end_years <- function(slide_list) {
+  lapply(slide_list, function(df) {
+
+    end_year = as.numeric(max(df$year, na.rm = TRUE))
+    return(end_year)
+
+  })
+}
+
+musp_syrs=get_start_years(muspp_5y_slide)%>%unlist()
+musp_eyrs=get_end_years(muspp_5y_slide)%>%unlist()
+
+
+mus_peak_slope=cbind(musp_syrs,musp_eyrs, musslopes_list)%>%as.data.frame()
+
+colnames(mus_peak_slope)= c("start_yr", "end_yr", "slope")
+
+mus_peak_slope$start_yr=as.integer(mus_peak_slope$start_yr)
+mus_peak_slope$end_yr=as.integer(mus_peak_slope$end_yr)
+
+mus_peak_slope=mus_peak_slope%>%
+  mutate(TSL=(end_yr-start_yr+1))
+
+mustsl=ggpubr::ggviolin(mus_peak_slope, x="start_yr", y="slope", add="jitter", color = "TSL")+
+  ggtitle("Muscid (peak)")+geom_hline(yintercept=0, lty=2)+
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+#Lycosidae
+step_size=1
+lycnyr=length(unique(lycsummary_peak$year))
+
+lycpp_5y_slide <- list()
+
+# Create sliding windows
+for (lycnyr in seq(5,20, by=1)) {
+
+  window_size <- lycnyr  # size of the sliding window
+
+  for (start in seq(1, nrow(lycsummary_peak) - window_size + 1, by = step_size)) {
+
+    end <- start + window_size - 1
+    lycpp_5y_slide[[length(lycpp_5y_slide) + 1]] <- lycsummary_peak[start:end, ]
+
+  }
+}
+
+#fit model
+increasing_mod=function(slide_list) {
+  lapply(slide_list, function(dat) {
+    slope <-as.numeric(coef(glm(mean ~ year, data = dat))[2])
+    return(slope)
+  })
+}
+
+lycslopes_list <- increasing_mod(lycpp_5y_slide)%>%unlist()
+
+#get data for plotting
+get_start_years <- function(slide_list) {
+  lapply(slide_list, function(df) {
+
+    start_year = as.numeric(min(df$year, na.rm = TRUE))
+    return(start_year)
+
+  })
+}
+
+get_end_years <- function(slide_list) {
+  lapply(slide_list, function(df) {
+
+    end_year = as.numeric(max(df$year, na.rm = TRUE))
+    return(end_year)
+
+  })
+}
+
+lycp_syrs=get_start_years(lycpp_5y_slide)%>%unlist()
+lycp_eyrs=get_end_years(lycpp_5y_slide)%>%unlist()
+
+
+lyc_peak_slope=cbind(lycp_syrs,lycp_eyrs, lycslopes_list)%>%as.data.frame()
+
+colnames(lyc_peak_slope)= c("start_yr", "end_yr", "slope")
+
+lyc_peak_slope$start_yr=as.integer(lyc_peak_slope$start_yr)
+lyc_peak_slope$end_yr=as.integer(lyc_peak_slope$end_yr)
+
+lyc_peak_slope=lyc_peak_slope%>%
+  mutate(TSL=(end_yr-start_yr+1))
+
+lyctsl=ggpubr::ggviolin(lyc_peak_slope, x="start_yr", y="slope", add="jitter", color = "TSL")+
+  ggtitle("Lycosidae (peak)")+geom_hline(yintercept=0, lty=2)+
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+#Phoridae
+step_size=1
+phocnyr=length(unique(phosummary_peak$year))
+
+phocpp_5y_slide <- list()
+
+# Create sliding windows
+for (phocnyr in seq(5,20, by=1)) {
+
+  window_size <- phocnyr  # size of the sliding window
+
+  for (start in seq(1, nrow(phosummary_peak) - window_size + 1, by = step_size)) {
+
+    end <- start + window_size - 1
+    phocpp_5y_slide[[length(phocpp_5y_slide) + 1]] <- phosummary_peak[start:end, ]
+
+  }
+}
+
+#fit model
+increasing_mod=function(slide_list) {
+  lapply(slide_list, function(dat) {
+    slope <-as.numeric(coef(glm(mean ~ year, data = dat))[2])
+    return(slope)
+  })
+}
+
+phocslopes_list <- increasing_mod(phocpp_5y_slide)%>%unlist()
+
+#get data for plotting
+get_start_years <- function(slide_list) {
+  lapply(slide_list, function(df) {
+
+    start_year = as.numeric(min(df$year, na.rm = TRUE))
+    return(start_year)
+
+  })
+}
+
+get_end_years <- function(slide_list) {
+  lapply(slide_list, function(df) {
+
+    end_year = as.numeric(max(df$year, na.rm = TRUE))
+    return(end_year)
+
+  })
+}
+
+phocp_syrs=get_start_years(phocpp_5y_slide)%>%unlist()
+phocp_eyrs=get_end_years(phocpp_5y_slide)%>%unlist()
+
+
+phoc_peak_slope=cbind(phocp_syrs,phocp_eyrs, phocslopes_list)%>%as.data.frame()
+
+colnames(phoc_peak_slope)= c("start_yr", "end_yr", "slope")
+
+phoc_peak_slope$start_yr=as.integer(phoc_peak_slope$start_yr)
+phoc_peak_slope$end_yr=as.integer(phoc_peak_slope$end_yr)
+
+phoc_peak_slope=phoc_peak_slope%>%
+  mutate(TSL=(end_yr-start_yr+1))
+
+phoctsl=ggpubr::ggviolin(phoc_peak_slope, x="start_yr", y="slope", add="jitter", color = "TSL")+
+  ggtitle("Phoridae (peak)")+geom_hline(yintercept=0, lty=2)+
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+#Sciaridae
+step_size=1
+scicnyr=length(unique(scisummary_peak$year))
+
+scicpp_5y_slide <- list()
+
+# Create sliding windows
+for (scicnyr in seq(5,20, by=1)) {
+
+  window_size <- scicnyr  # size of the sliding window
+
+  for (start in seq(1, nrow(scisummary_peak) - window_size + 1, by = step_size)) {
+
+    end <- start + window_size - 1
+    scicpp_5y_slide[[length(scicpp_5y_slide) + 1]] <- scisummary_peak[start:end, ]
+
+  }
+}
+
+#fit model
+increasing_mod=function(slide_list) {
+  lapply(slide_list, function(dat) {
+    slope <-as.numeric(coef(glm(mean ~ year, data = dat))[2])
+    return(slope)
+  })
+}
+
+scicslopes_list <- increasing_mod(scicpp_5y_slide)%>%unlist()
+
+#get data for plotting
+get_start_years <- function(slide_list) {
+  lapply(slide_list, function(df) {
+
+    start_year = as.numeric(min(df$year, na.rm = TRUE))
+    return(start_year)
+
+  })
+}
+
+get_end_years <- function(slide_list) {
+  lapply(slide_list, function(df) {
+
+    end_year = as.numeric(max(df$year, na.rm = TRUE))
+    return(end_year)
+
+  })
+}
+
+scicp_syrs=get_start_years(scicpp_5y_slide)%>%unlist()
+scicp_eyrs=get_end_years(scicpp_5y_slide)%>%unlist()
+
+
+scic_peak_slope=cbind(scicp_syrs,scicp_eyrs, scicslopes_list)%>%as.data.frame()
+
+colnames(scic_peak_slope)= c("start_yr", "end_yr", "slope")
+
+scic_peak_slope$start_yr=as.integer(scic_peak_slope$start_yr)
+scic_peak_slope$end_yr=as.integer(scic_peak_slope$end_yr)
+
+scic_peak_slope=scic_peak_slope%>%
+  mutate(TSL=(end_yr-start_yr+1))
+
+scictsl=ggpubr::ggviolin(scic_peak_slope, x="start_yr", y="slope", add="jitter", color = "TSL")+
+  ggtitle("Sciaridae (peak)")+geom_hline(yintercept=0, lty=2)+
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
