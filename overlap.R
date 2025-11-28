@@ -48,8 +48,8 @@ dryoverlap_df <- dry_fc %>%
   select(DOY, year, taxon, prob_norm) %>%
   left_join(dry_curves, by = c("DOY", "year")) %>%
   group_by(taxon, year) %>%
-  summarise(overlap = sum(pmin(prob_norm, prob_dry), na.rm = TRUE)) %>%
-  ungroup()
+  summarise(overlap = sum(pmin(prob_norm, prob_dry), na.rm = TRUE), .groups = "drop")
+
 
 dryoverlap_df$year <- factor(dryoverlap_df$year, levels = sort(as.numeric(levels(dryoverlap_df$year))))
 
@@ -388,6 +388,10 @@ siloverlap_df <- sil_fc %>%
   group_by(taxon, year) %>%
   summarise(overlap = sum(pmin(prob_norm, prob_sil), na.rm = TRUE)) %>%
   ungroup()
+
+siloverlap_df_summ= siloverlap_df%>%
+  group_by(taxon)%>%
+  summarise(mean_overlap=mean(overlap))
 
 siloverlap_df$year <- factor(siloverlap_df$year, levels = sort(as.numeric(levels(siloverlap_df$year))))
 

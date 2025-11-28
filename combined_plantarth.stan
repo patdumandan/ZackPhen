@@ -82,15 +82,15 @@ model {
   alpha_pl ~ normal(0,5);
   beta_DOYs_pl ~ normal(0,2);
   beta_DOYsqs_pl ~ normal(-1,1);
-  sigma_pl_plot ~ normal(0,2);
+  sigma_pl_plot ~ normal(0,1);
   u_pl_plot_raw ~ normal(0,1);
 
   alpha_ar ~ normal(0,5);
   beta_DOYs_ar ~ normal(0,2);
   beta_DOYsqs_ar ~ normal(-1,1);
-  sigma_ar_plot ~ normal(0,2);
+  sigma_ar_plot ~ normal(0,1);
   u_ar_plot_raw ~ normal(0,1);
-  phi_ar ~ cauchy(0,2.5);
+  phi_ar ~ exponential(1);
 
   // Likelihood: Plants
   for (i in 1:Nplant) {
@@ -106,119 +106,49 @@ model {
 
 generated quantities {
 
-  // Overlap only for shared years
-  vector[N_shared] overlap_joint;
+  array[Nplant] int y_plant;
+  vector[Nyr_pl] plant_DOY_peak_std;
+  vector[Nyr_pl] plant_DOY_peak_unscaled;
 
-  // Peak DOY (raw calendar day) for each year in each taxon
-  vector[Nyr_pl] peak_DOY_pl;
-  vector[Nyr_ar] peak_DOY_ar;
+  array[Narth] int y_arth;
+  vector[Nyr_ar] arth_DOY_peak_std;
+  vector[Nyr_ar] arth_DOY_peak_unscaled;
 
-  // Temporary curves
-  vector[ND] f_pl;
-  vector[ND] f_ar;
-
-  for (s in 1:N_shared) {
-
-    int yp = pl_shared_id[s];
-    int ya = ar_shared_id[s];
-
-    real best_pl = -1;
-    real best_ar = -1;
-    int best_d_pl = 1;
-    int best_d_ar = 1;
-
-    for (d in 1:ND) {
-
-      real DOY_raw = 150 + (d - 1);
-
-      // Plant curve
-      real zpl = (DOY_raw - DOY_mean_pl) / DOY_sd_pl;
-      real zpl2 = zpl * zpl;
-
-      real lp_pl =alpha_pl +
-        beta_DOYs_pl[yp]   * zpl +
-        beta_DOYsqs_pl[yp] * zpl2;
-
-      f_pl[d] = inv_logit(lp_pl);
-
-      // Arthropod curve
-      real zar = (DOY_raw - DOY_mean_ar) / DOY_sd_ar;
-      real zar2 = zar * zar;
-
-      real lp_ar = alpha_ar +
-        beta_DOYs_ar[ya]   * zar +
-        beta_DOYsqs_ar[ya] * zar2;
-
-      f_ar[d] = exp(lp_ar);
-
-      // Track peak DOYs
-      if (f_pl[d] > best_pl) {
-        best_pl = f_pl[d];
-        best_d_pl = d;
-      }
-
-      if (f_ar[d] > best_ar) {
-        best_ar = f_ar[d];
-        best_d_ar = d;
-      }
-    }
-
-    // Save peaks for these shared-year indices
-    peak_DOY_pl[yp] = 150 + (best_d_pl - 1);
-    peak_DOY_ar[ya] = 150 + (best_d_ar - 1);
-
-    // Compute overlap
-    real o = 0;
-    for (d in 1:ND)
-      o += fmin(f_pl[d], f_ar[d]);
-
-    overlap_joint[s] = o;
+//plant peak DOY
+  for (j in 1:Nplant) {
+    y_plant[j] = binomial_rng(tot_F[j] + tot_NF[j], inv_logit(eta_pl[j]));
   }
 
-  // For plant years with no shared arthropod year → assign peak DOY via the same loop
   for (y in 1:Nyr_pl) {
-    if (peak_DOY_pl[y] == 0) {   // not yet filled
-      real best = -1;
-      int best_d = 1;
+    if (beta_DOYsqs_pl[y] != 0) {
+      plant_DOY_peak_std[y] = -beta_DOYs_pl[y] / (2 * beta_DOYsqs_pl[y]);
+      plant_DOY_peak_unscaled[y] = plant_DOY_peak_std[y] * DOY_sd_pl + DOY_mean_pl;
 
-      for (d in 1:ND) {
-        real DOY_raw = 150 + (d - 1);
-        real z = (DOY_raw - DOY_mean_pl) / DOY_sd_pl;
-        real z2 = z * z;
-        real lp =alpha_pl +
-          beta_DOYs_pl[y] * z +
-          beta_DOYsqs_pl[y] * z2;
-        real fx = inv_logit(lp);
-        if (fx > best) {
-          best = fx;
-          best_d = d;
-        }
-      }
-      peak_DOY_pl[y] = 150 + (best_d - 1);
+      //constrain to observation period
+      plant_DOY_peak_unscaled[y]=fmin(fmax(plant_DOY_peak_unscaled[y], 150), 270);
+    }
+    else {
+      plant_DOY_peak_std[y] = negative_infinity();
+      plant_DOY_peak_unscaled[y] = negative_infinity();
     }
   }
 
-  // Same for arthropod years
-  for (y in 1:Nyr_ar) {
-    if (peak_DOY_ar[y] == 0) {
-      real best = -1;
-      int best_d = 1;
+  //arth peak DOY
+   for (n in 1:Narth) {
 
-      for (d in 1:ND) {
-        real DOY_raw = 150 + (d - 1);
-        real z = (DOY_raw - DOY_mean_ar) / DOY_sd_ar;
-        real z2 = z * z;
-        real lp =
-          alpha_ar +
-          beta_DOYs_ar[y] * z +
-          beta_DOYsqs_ar[y] * z2;
-        real fx = exp(lp);
-        if (fx > best) {
-          best = fx;
-          best_d = d;
-        }
-      }
-      peak_DOY_ar[y] = 150 + (best_d - 1);
+    y_arth[n] = neg_binomial_2_rng(exp(eta_ar[n]), phi_ar);
+  }
+
+  for (w in 1:Nyr_ar) {
+    if (beta_DOYsqs_ar[w] != 0) {
+      arth_DOY_peak_std[w] = -beta_DOYs_ar[w] / (2 * beta_DOYsqs_ar[w]);
+      arth_DOY_peak_unscaled[w] = arth_DOY_peak_std[w] * DOY_sd_ar + DOY_mean_ar;
+
+      // Constrain to observed period
+      arth_DOY_peak_unscaled[w] = fmin(fmax(arth_DOY_peak_unscaled[w], 150), 270);
+    } else {
+      arth_DOY_peak_std[w] = negative_infinity(); //-Inf;forbid estimation of improbable values
+      arth_DOY_peak_unscaled[w] = negative_infinity();
     }
   }
 }
