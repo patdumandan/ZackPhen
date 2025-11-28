@@ -1,3 +1,7 @@
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(posterior)
 
 drypho=list(
 DOY_mean_pl=mean(plant_datA$DOY),
@@ -24,6 +28,7 @@ arth_DOY=pho_datA$DOYs,
 arth_DOYsqs=pho_datA$DOYsqs,
 ND=121)
 
+#later for overlap computation:
 shared_years <- intersect(unique(dry_datA$year),
                           unique(pho_datA$Year))
 
@@ -36,9 +41,9 @@ drypho$ar_shared_id = match(shared_years,
                             sort(unique(pho_datA$Year)))
 
 
+#fit model
 combined_mod=cmdstan_model("combined_plantarth.stan")
 
-#fit model
 drypho_mod <- combined_mod$sample(
   data = drypho,
   seed = 123,
@@ -47,14 +52,7 @@ drypho_mod <- combined_mod$sample(
   iter_sampling = 2000,
   iter_warmup = 500)
 
-library(ggplot2)
-library(dplyr)
-library(tidyr)
-library(posterior)
-
-# Example: shared_years vector
-# shared_years <- c(2010, 2011, 2012, ...)  # length = N_shared
-
+#extract posterior draws
 draws_drypho=drypho_mod$draws(variables=c("alpha_pl", "beta_DOYs_pl", "beta_DOYsqs_pl",
                                            "alpha_ar", "beta_DOYs_ar", "beta_DOYsqs_ar"),
                                format="df")
@@ -67,10 +65,9 @@ alpha_ar        <- as_draws_matrix(draws_drypho[,"alpha_ar"])
 beta_DOYs_ar    <- as_draws_matrix(draws_drypho[,grepl("beta_DOYs_ar", colnames(draws_drypho))])
 beta_DOYsqs_ar  <- as_draws_matrix(draws_drypho[,grepl("beta_DOYsqs_ar", colnames(draws_drypho))])
 
-DOY_seq <- 150:270        # ND = 121
-ND <- length(DOY_seq)
-
 # Standardized DOY sequences (plant + arthropod)
+DOY_seq <- 150:270
+
 doy_std_pl <- (DOY_seq - drypho$DOY_mean_pl) / drypho$DOY_sd_pl
 doy_sq_std_pl <- doy_std_pl^2
 
@@ -84,7 +81,7 @@ ND      <- length(150:270)
 
 generate_fitted_curve <- function(draw, yr, alpha, beta_DOYs, beta_DOYsqs, z, z2) {
   eta <- alpha[draw] +
-    beta_DOYs[draw, yr]   * z +
+    beta_DOYs[draw, yr]   * z + #z=standardized DOY seq, z2=quad for DOY seq
     beta_DOYsqs[draw, yr] * z2
   plogis(eta)
 }
@@ -98,7 +95,7 @@ for (draw in 1:n_draws) {
       draw, y, alpha_pl, beta_DOYs_pl, beta_DOYsqs_pl,
       doy_std_pl, doy_sq_std_pl)
 
-    s <- sum(plant_fits[draw, y, ])
+    s <- sum(plant_fits[draw, y, ]) #normalize values to get PDF
     if (s > 0) plant_fits[draw, y, ] <- plant_fits[draw, y, ] / s
   }
 
@@ -118,6 +115,7 @@ N_shared <- length(drypho$pl_shared_id)
 pl_shared_id=drypho$pl_shared_id
 ar_shared_id=drypho$ar_shared_id
 n_draws <- nrow(alpha_pl)
+
 drypho_overlap <- matrix(NA, n_draws, N_shared)
 
 for (s in 1:N_shared) {
@@ -159,7 +157,7 @@ ggplot(summary_overlap, aes(x = year, y = median)) +
 head(drypho_overlap)
 colnames(drypho_overlap)=shared_years
 
-# Initialize vector to store slopes
+# vector of slopes
 slopes <- numeric(n_draws)
 
 for(d in 1:n_draws) {
