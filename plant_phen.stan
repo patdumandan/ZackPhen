@@ -1,4 +1,5 @@
 data {
+   int<lower=1> ND;                   //  days in prediction grid=121
   int<lower=1> N;                      // observations
   int<lower=1> Nplots;                      // number of plots
   int<lower=1> Nyr;                      // number of years
@@ -31,14 +32,13 @@ transformed parameters {
 
   u_plot = u_plot_raw * sigma_plot;
 
-  // Likelihood statement, deterministic model for flowering
+  //deterministic model for flowering
   for (n in 1:N) {
 
       eta[n]= alpha +
                beta_DOYs[year_id[n]] * DOYs[n] +
                beta_DOYsqs[year_id[n]] * DOYsqs[n] +
-               u_plot[plot_id[n]];
-}
+               u_plot[plot_id[n]];}
 }
 
 model {
@@ -48,33 +48,31 @@ model {
     sigma_plot ~ normal(0, 2);
     u_plot_raw ~ normal(0, 1);
 
+// Likelihood statement
  for (i in 1:N) {
-    int y_total = tot_F[i] + tot_NF[i]; // total individuals
 
-    tot_F[i] ~ binomial_logit(y_total, eta[i]); //binom(n,p)
-  }
+    tot_F[i] ~ binomial_logit(tot_F[i] + tot_NF[i], eta[i]);} //binom(n,p)
 }
 
 generated quantities {
- array[N] int y_pred;
-  vector[Nyr] DOY_peak_std;
-  vector[Nyr] DOY_peak_unscaled;
+  array[N] int y_pred;
+  // vector[Nyr] DOY_peak_std;
+  // vector[Nyr] DOY_peak_unscaled;
 
   for (j in 1:N) {
-    y_pred[j] = binomial_rng(tot_F[j] + tot_NF[j], inv_logit(eta[j]));
-  }
-
-  for (y in 1:Nyr) {
-    if (beta_DOYsqs[y] != 0) {
-      DOY_peak_std[y] = -beta_DOYs[y] / (2 * beta_DOYsqs[y]);
-      DOY_peak_unscaled[y] = DOY_peak_std[y] * DOY_sd + DOY_mean;
-
-      //constrain to observation period
-      DOY_peak_unscaled[y]=fmin(fmax(DOY_peak_unscaled[y], 150), 270);
-    }
-    else {
-      DOY_peak_std[y] = negative_infinity();
-      DOY_peak_unscaled[y] = negative_infinity();
-    }
-  }
+    y_pred[j] = binomial_rng(tot_F[j] + tot_NF[j], inv_logit(eta[j]));}
 }
+  // for (y in 1:Nyr) {
+  //   if (beta_DOYsqs[y] != 0) {
+  //     DOY_peak_std[y] = -beta_DOYs[y] / (2 * beta_DOYsqs[y]);
+  //     DOY_peak_unscaled[y] = DOY_peak_std[y] * DOY_sd + DOY_mean;
+  //
+  //     //constrain to observation period
+  //     DOY_peak_unscaled[y]=fmin(fmax(DOY_peak_unscaled[y], 150), 270);
+  //   }
+  //   else {
+  //     DOY_peak_std[y] = negative_infinity();
+  //     DOY_peak_unscaled[y] = negative_infinity();
+  //   }
+  // }
+

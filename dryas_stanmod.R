@@ -23,11 +23,12 @@ dryas_data <- list(
   Nplots = length(unique(dry_datA$plot_id)),
   plot_id = dry_datA$plot_id,
   DOY_sd= sd(plant_datA$DOY),
-  DOY_mean=mean(plant_datA$DOY)
-)
+  DOY_mean=mean(plant_datA$DOY),
+  ND=121)
 
 #compile model
 plant_mod=cmdstan_model("plant_phen.stan")
+plant_mod2=cmdstan_model("plant_phen2.stan")
 
 #fit model
 dry_mod <- plant_mod$sample(
@@ -36,12 +37,19 @@ dry_mod <- plant_mod$sample(
   chains = 4,
   parallel_chains = 4,
   iter_sampling = 2000,
-  iter_warmup = 500
-)
+  iter_warmup = 500)
+
+dry_mod2 <- plant_mod2$sample(
+  data = dryas_data,
+  seed = 123,
+  chains = 4,
+  parallel_chains = 4,
+  iter_sampling = 2000,
+  iter_warmup = 50)
 
 #predictions
 
-dry_draws <- dry_mod$draws(format="df", variables="y_pred")
+dry_draws <- dry_mod2$draws(format="df", variables="y_pred")
 y_pred_matrix <- as.data.frame(dry_draws)
 y_pred_matrix=y_pred_matrix[,-1158:-1160]
 
@@ -66,86 +74,67 @@ highlight_years <- c( "1998", "2018", "1997", "2014", "2015", "2020", "2021")
 
 ggplot(df_plot, aes(x = DOY, y = pred_mean, group = year, col = as.factor(year))) +
   geom_line(linewidth = 0.6, alpha = 0.5) +  # default lines for all years
-  geom_line(data = subset(df_plot, year %in% highlight_years),
-            aes(x = DOY, y = pred_mean, group = year, color = as.factor(year)),
-            linewidth = 1.2) +  # bold lines for highlighted years
+  # geom_line(data = subset(df_plot, year %in% highlight_years),
+  #           aes(x = DOY, y = pred_mean, group = year, color = as.factor(year)),
+  #           linewidth = 1.2) +  # bold lines for highlighted years
   geom_point(aes(y = tot_F), size = 1.5) +  # points for observed data
   facet_wrap(~Plot) +
-  scale_color_manual(
-    values = c( "1998" = "orange", "2018"="red", "1997"= "blue", "2014"="green", "2015"="pink", "2020"="black", "2021"="violet"),
-    breaks = highlight_years,
-    guide = guide_legend(title = "Odd Years")
-  ) +
+  # scale_color_manual(
+  #   values = c( "1998" = "orange", "2018"="red", "1997"= "blue", "2014"="green", "2015"="pink", "2020"="black", "2021"="violet"),
+  #   breaks = highlight_years,
+  #   guide = guide_legend(title = "Odd Years")
+  # ) +
   theme_classic() +
   labs(
     title = "Predicted Flowering Curve per Year",
     y = "Predicted Flower Totals",
-    color = "Year"
-  )
+    color = "Year")
 
 #extract peak DOY
+# Extract draws
+draws_dry = dry_mod2$draws(variables = c("beta_DOYs", "beta_DOYsqs"), format="df")
 
-draws_doy=dry_mod$draws(variable="DOY_peak_unscaled", format="df")
+beta_DOYs_dry   = as.matrix(draws_dry[, startsWith(colnames(draws_dry), "beta_DOYs[")])
+beta_DOYsqs_dry = as.matrix(draws_dry[, startsWith(colnames(draws_dry), "beta_DOYsqs[")])
 
-years <- sort(unique(dry_datA$year))
+# Standardization constants
+DOY_sd   = sd(plant_datA$DOY)
+DOY_mean = mean(plant_datA$DOY)
 
-require(posterior)
+n_draws = nrow(beta_DOYs_dry)
+Nyr     = ncol(beta_DOYs_dry)
 
-peak_df <- as_draws_df(draws_doy) |>
-  mutate(.draw = row_number()) |>
-  tidyr::pivot_longer(
-    cols = starts_with("DOY_peak_unscaled"),
-    names_pattern = "DOY_peak_unscaled\\[(\\d+)\\]",
-    names_to = "year_index",
-    values_to = "DOY_peak"
-  ) |>
-  mutate(
-    year_index = as.integer(year_index),
-    year = years[year_index]
-  )
+dry_peak = matrix(NA, nrow = n_draws, ncol = Nyr)
 
-# peak timingsummary table
-summary_peak <- peak_df |>
-  group_by(year) |>
+for (y in 1:Nyr) {
+  DOY_peak_std = -beta_DOYs_dry[, y] / (2 * beta_DOYsqs_dry[, y])
+  dry_peak[, y] = DOY_peak_std * DOY_sd + DOY_mean
+}
+
+colnames(dry_peak) = unique(dry_datA$year)
+dry_peak=as.data.frame(dry_peak)
+
+# peak timing summary table
+drysummary_peak <- dry_peak%>%pivot_longer(cols=1:24, names_to="year")%>%
+  rename(peak=value)%>%
+  group_by(year)%>%
   summarise(
-    mean  = mean(DOY_peak),
-    median= median(DOY_peak),
-    lower= quantile(DOY_peak, 0.05),
-    upper= quantile(DOY_peak, 0.95)
-  )%>%filter(!(mean<=150 | lower<=150| upper<=150))
+    mean  = mean(peak),
+    median= median(peak),
+    lower= quantile(peak, 0.05),
+    upper= quantile(peak, 0.95))
 
-print(summary_peak)
+print(drysummary_peak)
 
-# #HPDI
-# require(bayestestR)
-#
-# summary_peak_hpdi <- peak_df |>
-#   group_by(year) |>
-#   summarise(
-#     median = median(DOY_peak),
-#     hpdi = list(hdi(DOY_peak, ci = 0.90)))%>% # hdi() returns a data frame
-#    mutate(
-#     highlight_group = ifelse(year %in% highlight_years, as.character(year), "Other"))%>%
-#   unnest_wider(hpdi)  # expands the "hdi" list column into lower/upper
-
-# visualise
-dryas_peak=ggplot(summary_peak, aes(x = year, y = mean, col=as.factor(year))) +
-  geom_line(data = subset(summary_peak, year %in% highlight_years),
-            aes(x = year, y = mean, group = year, color = as.factor(year)),
-            linewidth = 1.2) +  # bold lines for highlighted years
-  geom_point(size = 2) +
+dryas_peak=ggplot(drysummary_peak, aes(x = year, y = median, col=as.factor(year))) +
+  geom_point(size = 2) +ylim(85,200)+
   geom_errorbar(aes(ymin = lower, ymax = upper), width = 0.3) +
-  scale_color_manual(
-    values = c( "1998" = "orange", "2018"="red"),
-    breaks = highlight_years,
-    guide = guide_legend(title = "Odd Years")
-  ) +
   labs(
-    title = "peak timing",
+    title = "Dryas peak timing",
     x = "Year",
     y = "Peak Day of Year (DOY)",
     caption = "Mean and 90% CI")+
-  theme_classic() #1998 uncertainty (coldest yearand longest flowering duration): https://www.nature.com/articles/nclimate1909
+  theme_classic() #1998 uncertainty (coldest year and longest flowering duration): https://www.nature.com/articles/nclimate1909
 
 slope_samples <- peak_df |>
   group_by(.draw) |>
