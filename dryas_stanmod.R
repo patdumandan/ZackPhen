@@ -29,6 +29,9 @@ dryas_data <- list(
 #compile model
 plant_mod=cmdstan_model("plant_phen.stan")
 plant_mod2=cmdstan_model("plant_phen2.stan")
+plant_mod3=cmdstan_model("plant_phen3.stan")
+plant_mod4=cmdstan_model("plant_phen4.stan")
+plant_mod5=cmdstan_model("plant_phen5.stan")
 
 #fit model
 dry_mod <- plant_mod$sample(
@@ -45,7 +48,31 @@ dry_mod2 <- plant_mod2$sample(
   chains = 4,
   parallel_chains = 4,
   iter_sampling = 2000,
-  iter_warmup = 50)
+  iter_warmup = 500)
+
+dry_mod3 <- plant_mod3$sample(
+  data = dryas_data,
+  seed = 123,
+  chains = 4,
+  parallel_chains = 4,
+  iter_sampling = 2000,
+  iter_warmup = 500)
+
+dry_mod4 <- plant_mod4$sample(
+  data = dryas_data,
+  seed = 123,
+  chains = 4,
+  parallel_chains = 4,
+  iter_sampling = 2000,
+  iter_warmup = 500)
+
+dry_mod5 <- plant_mod4$sample(
+  data = dryas_data,
+  seed = 123,
+  chains = 4,
+  parallel_chains = 4,
+  iter_sampling = 2000,
+  iter_warmup = 500)
 
 #predictions
 
@@ -92,7 +119,7 @@ ggplot(df_plot, aes(x = DOY, y = pred_mean, group = year, col = as.factor(year))
 
 #extract peak DOY
 # Extract draws
-draws_dry = dry_mod2$draws(variables = c("beta_DOYs", "beta_DOYsqs"), format="df")
+draws_dry = dry_mod5$draws(variables = c("beta_DOYs", "beta_DOYsqs"), format="df")
 
 beta_DOYs_dry   = as.matrix(draws_dry[, startsWith(colnames(draws_dry), "beta_DOYs[")])
 beta_DOYsqs_dry = as.matrix(draws_dry[, startsWith(colnames(draws_dry), "beta_DOYsqs[")])
@@ -127,13 +154,13 @@ drysummary_peak <- dry_peak%>%pivot_longer(cols=1:24, names_to="year")%>%
 print(drysummary_peak)
 
 dryas_peak=ggplot(drysummary_peak, aes(x = year, y = median, col=as.factor(year))) +
-  geom_point(size = 2) +ylim(85,200)+
+  geom_point(size = 2) +
   geom_errorbar(aes(ymin = lower, ymax = upper), width = 0.3) +
   labs(
     title = "Dryas peak timing",
     x = "Year",
     y = "Peak Day of Year (DOY)",
-    caption = "Mean and 90% CI")+
+    caption = "Median and 90% CI")+
   theme_classic() #1998 uncertainty (coldest year and longest flowering duration): https://www.nature.com/articles/nclimate1909
 
 slope_samples <- peak_df |>
