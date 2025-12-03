@@ -41,6 +41,7 @@ dryas_data <- list(
   DOYs=dry_datA$DOYs,
   DOYsqs=dry_datA$DOYsqs,
   yearc=dry_datA$yearc,
+  year_vec = (unique(dry_datA$yearc) - mean(unique(dry_datA$yearc)))/sd(unique(dry_datA$yearc)),
   Nplots = length(unique(dry_datA$plot_id)),
   plot_id = dry_datA$plot_id,
   DOY_sd= sd(plant_datA$DOY),
@@ -94,6 +95,8 @@ ppc_hist(y = dryas_data$tot_F, yrep[1:11,])
 plot(dry_mod, pars="mu")     # Peak dates
 plot(dry_mod, pars="width")  # width parameter of the phenology
 
+
+
 # plot the phenology curve together with data
 ## ==========================================
 
@@ -132,6 +135,98 @@ for (y in 1:dim(mu.samp)[2]) {
   }
   
 }
+
+
+####### Model 6b ###################
+
+# Fit the model
+dry_mod <- stan("plant_phen6b.stan",
+                data = dryas_data,
+                #                 init = init,
+                seed = 123,
+                chains = 4,
+                iter = 300,
+                warmup = 200)
+
+# Check for the convergence and mixing of sampling
+# ================================================
+# traceplots
+traceplot(dry_mod, pars = "mu")
+traceplot(dry_mod, pars = "beta_mu")
+traceplot(dry_mod, pars = "width")
+traceplot(dry_mod, pars = "alpha_year")
+traceplot(dry_mod, pars = c("sigma_mu","sigma_width"))
+
+# Rhat values
+grid.arrange(mcmc_rhat_hist(rhat(dry_mod)), 
+             mcmc_rhat(rhat(dry_mod)), 
+             mcmc_neff_hist(neff_ratio(dry_mod)), nrow = 2)
+
+# Regular, visual, posterior predictive checks
+color_scheme_set("red")
+yrep = as.matrix(dry_mod, pars= "y_pred")
+yrep <- yrep[(dim(yrep)[1]-99):dim(yrep)[1],]   # replicate data, take only the last 100 samples to speed up drawing
+grid.arrange(ppc_dens_overlay(y = dryas_data$tot_F,
+                              yrep = yrep),
+             ppc_ecdf_overlay(y = dryas_data$tot_F,
+                              yrep = yrep),
+             ppc_pit_ecdf(y = dryas_data$tot_F, yrep = yrep, prob = 0.99, plot_diff = FALSE),
+             ppc_pit_ecdf(y = dryas_data$tot_F, yrep = yrep, prob = 0.99, plot_diff = TRUE),
+             nrow = 2)
+ppc_hist(y = dryas_data$tot_F, yrep[1:11,])
+
+
+# Examine posterior distributions of the parameters
+# =========================================
+plot(dry_mod, pars="mu")     # Peak dates
+plot(dry_mod, pars="beta_mu")
+plot(dry_mod, pars="width")  # width parameter of the phenology
+
+
+
+# plot the phenology curve together with data
+## ==========================================
+
+# Vector of DoYs for plotting
+DOY = seq(-2, 2, length = 100)
+
+# Posterior samples of parameters to calculate the curve
+mu = as.matrix(dry_mod, pars = "mu")
+width = as.matrix(dry_mod, pars = "width")
+alpha_year = as.matrix(dry_mod, pars = "alpha_year")
+u_plot = as.matrix(dry_mod, pars = "u_plot")
+u_plot_mu = as.matrix(dry_mod, pars = "u_plot_mu")
+
+#eta = array(nrow = dim(mu.samp)[1], ncol=length(DOY), )
+eta = vector(length = length(DOY), )
+plot.id = unique(dryas_data$plot_id)
+cols = rainbow(6)
+# Loop through the years
+par(mfrow = c(3,4))
+invLogit = function(x){exp(x)/(1+exp(x))}
+for (y in 1:dim(mu.samp)[2]) {
+  # loop through the plots
+  for (pl in 1:length(plot.id)){
+    # loop through DoYs
+    for (nd in 1:length(DOY)){
+      eta[nd] = mean( invLogit(alpha_year[,y] - ( DOY[nd] - (mu[,y]+u_plot_mu[plot.id[pl]]) )^2./width[,y]^2 + u_plot[plot.id[pl]]) )
+    }
+    if (pl == 1){
+      plot(DOY,eta, type = "l", col = cols[pl], 
+           ylim = c(0,1),
+           title = paste("year", y))
+    } else {
+      lines(DOY,eta, type = "l", col = cols[pl])
+    }
+    ind = dryas_data$plot_id==pl & dryas_data$year_id==y
+    points(dryas_data$DOYs[ind], 
+           dryas_data$tot_F[ind]/(dryas_data$tot_F[ind]+dryas_data$tot_NF[ind]), 
+           col=cols[pl])
+  }
+  
+}
+
+
 
 
 #########################################################################

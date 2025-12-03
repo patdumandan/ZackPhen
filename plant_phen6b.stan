@@ -15,6 +15,8 @@ data {
 
   vector[N] DOYs;
   vector[N] DOYsqs;
+  
+  vector[Nyr] year_vec;
 }
 
 parameters {
@@ -33,6 +35,9 @@ parameters {
   real mu_bar;    // mean peak time across years
   real<lower=0> sigma_mu; // sd of yearly peak times across years
   vector[Nyr] mu_raw;
+  real beta_mu;
+  vector[Nplots] u_plot_mu_raw; 
+  real<lower=0> sigma_mu_plot;
 
   // Width parameter for the phenology
   real<lower=0> width_bar;    // mean peak time across years
@@ -46,7 +51,8 @@ transformed parameters {
 
   vector[Nyr] alpha_year = alpha+sigma_year*alpha_year_raw;
 
-  vector[Nyr] mu = mu_bar + sigma_mu*mu_raw; // year-specific peak times
+  vector[Nyr] mu = mu_bar + beta_mu*year_vec + sigma_mu*mu_raw; // year-specific peak times
+  vector[Nplots] u_plot_mu = u_plot_mu_raw*sigma_mu_plot;
 
   vector[Nyr] width = width_bar + sigma_width*width_raw; // year-specific phenology widths
 
@@ -54,7 +60,7 @@ transformed parameters {
 
   for (n in 1:N) {
     eta[n] = alpha_year[year_id[n]] + u_plot[plot_id[n]] - 
-            ( DOYs[n] - mu[year_id[n]] ).^2./width[year_id[n]].^2;
+            ( DOYs[n] - (mu[year_id[n]] + u_plot_mu[plot_id[n]]) ).^2./width[year_id[n]].^2;
   }
 }
 
@@ -70,9 +76,12 @@ model {
 
   // peak time -- Hierarchical priors ----
   mu_bar   ~ normal(0, 2); //or 0,2
-  //sigma_mu ~ normal(0,1);
   sigma_mu ~ student_t(4, 0, 0.2);
   mu_raw ~ normal(0, 1);
+  beta_mu ~ normal(0, 2);
+
+  u_plot_mu_raw ~ normal(0, 1);
+  sigma_mu_plot ~ normal(0, 2);
 
   // width of phenology
   width_bar ~ normal(1, 1); //or 0,2
