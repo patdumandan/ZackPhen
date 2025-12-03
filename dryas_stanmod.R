@@ -50,6 +50,42 @@ dry_mod2 <- plant_mod2$sample(
   iter_sampling = 2000,
   iter_warmup = 500)
 
+# ===================
+
+plot(dryas_data$DOYs, dryas_data$tot_F/(dryas_data$tot_F+dryas_data$tot_NF))
+#dryas_data$year_id
+
+
+init = list(list(sigma_mu = c(runif(1)) ),
+            list(sigma_mu = c(runif(1)) ),
+            list(sigma_mu = c(runif(1)) ),
+            list(sigma_mu = c(runif(1)) ))
+
+library(rstan)
+options(mc.cores = parallel::detectCores())
+rstan_options(auto_write = TRUE)
+dry_mod2 <- stan("plant_phen3.stan",
+                 data = dryas_data,
+                 init = init,
+                 seed = 123,
+                 chains = 4,
+                 iter = 600,
+                 warmup = 500)
+
+traceplot(dry_mod2, pars = "mu")
+traceplot(dry_mod2, pars = "beta_DOYs")
+traceplot(dry_mod2, pars = "beta_DOYsqs")
+
+traceplot(dry_mod2, pars = "sigma_mu")
+
+
+plot(dry_mod2, pars = "mu")
+
+
+samples = as.matrix(dry_mod2, pars = "mu")
+
+## ========================================
+
 dry_mod3 <- plant_mod3$sample(
   data = dryas_data,
   seed = 123,
