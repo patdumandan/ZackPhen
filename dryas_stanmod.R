@@ -66,13 +66,13 @@ dry_mod4 <- plant_mod4$sample(
   iter_sampling = 2000,
   iter_warmup = 500)
 
-dry_mod5 <- plant_mod4$sample(
+dry_mod5 <- plant_mod5$sample(
   data = dryas_data,
   seed = 123,
   chains = 4,
   parallel_chains = 4,
-  iter_sampling = 2000,
-  iter_warmup = 500)
+  iter_sampling = 200,
+  iter_warmup = 50)
 
 #predictions
 
@@ -119,7 +119,7 @@ ggplot(df_plot, aes(x = DOY, y = pred_mean, group = year, col = as.factor(year))
 
 #extract peak DOY
 # Extract draws
-draws_dry = dry_mod5$draws(variables = c("beta_DOYs", "beta_DOYsqs"), format="df")
+draws_dry = dry_mod4$draws(variables = c("mu_year"), format="df")
 
 beta_DOYs_dry   = as.matrix(draws_dry[, startsWith(colnames(draws_dry), "beta_DOYs[")])
 beta_DOYsqs_dry = as.matrix(draws_dry[, startsWith(colnames(draws_dry), "beta_DOYsqs[")])

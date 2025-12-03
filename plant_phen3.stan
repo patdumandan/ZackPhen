@@ -28,7 +28,7 @@ parameters {
 
   real mu_bar;    // mean peak time across years
   real<lower=0> sigma_mu; // sd of yearly peak times across years
-  vector[Nyr] mu; //year-specific slope values
+  vector[Nyr] mu_raw;
 
   vector[Nyr] beta_DOYsqs;  // year specific curvature (second order effect)
 }
@@ -38,7 +38,9 @@ transformed parameters {
 
   vector[Nyr] alpha_year = alpha+sigma_year*alpha_year_raw;
 
-  vector[Nyr] beta_DOYs    = -2*(mu.*beta_DOYsqs);
+  vector[Nyr] mu = mu_bar + sigma_mu*mu_raw; //year-specific peak times
+
+  vector[Nyr] beta_DOYs = -2*(mu.*beta_DOYsqs);
 
   array[N] real eta;
 
@@ -63,9 +65,10 @@ model {
   beta_DOYsqs ~ normal(-1, 1);      // favors concave-down shape
 
   // peak time -- Hierarchical priors ----
-  mu_bar   ~ normal(0, 5); //or 0,2
-  sigma_mu ~ normal(0,1);
-  mu ~ normal(mu_bar, sigma_mu);
+  mu_bar   ~ normal(0, 2); //or 0,2
+  //sigma_mu ~ normal(0,1);
+  sigma_mu ~ student_t(4, 0, 0.2);
+  mu_raw ~ normal(0, 1);
 
   // Likelihood
   for (i in 1:N)
