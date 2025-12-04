@@ -109,7 +109,6 @@ width = as.matrix(dry_mod, pars = "width")
 alpha_year = as.matrix(dry_mod, pars = "alpha_year")
 u_plot = as.matrix(dry_mod, pars = "u_plot")
 
-#eta = array(nrow = dim(mu.samp)[1], ncol=length(DOY), )
 eta = vector(length = length(DOY), )
 plot.id = unique(dryas_data$plot_id)
 cols = rainbow(6)
@@ -197,14 +196,13 @@ alpha_year = as.matrix(dry_mod, pars = "alpha_year")
 u_plot = as.matrix(dry_mod, pars = "u_plot")
 u_plot_mu = as.matrix(dry_mod, pars = "u_plot_mu")
 
-#eta = array(nrow = dim(mu.samp)[1], ncol=length(DOY), )
 eta = vector(length = length(DOY), )
 plot.id = unique(dryas_data$plot_id)
 cols = rainbow(6)
 # Loop through the years
 par(mfrow = c(3,4))
 invLogit = function(x){exp(x)/(1+exp(x))}
-for (y in 1:dim(mu.samp)[2]) {
+for (y in 1:dim(mu)[2]) {
   # loop through the plots
   for (pl in 1:length(plot.id)){
     # loop through DoYs
