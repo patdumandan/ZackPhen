@@ -116,7 +116,7 @@ cols = rainbow(6)
 # Loop through the years
 par(mfrow = c(3,4))
 invLogit = function(x){exp(x)/(1+exp(x))}
-for (y in 1:dim(mu.samp)[2]) {
+for (y in 1:dim(mu)[2]) {
   # loop through the plots
   for (pl in 1:length(plot.id)){
     # loop through DoYs
