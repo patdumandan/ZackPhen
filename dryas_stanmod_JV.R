@@ -125,7 +125,7 @@ for (y in 1:dim(mu)[2]) {
     if (pl == 1){
       plot(DOY,eta, type = "l", col = cols[pl], 
            ylim = c(0,1),
-           title = paste("year", y))
+           main = paste("year", y))
     } else {
       lines(DOY,eta, type = "l", col = cols[pl])
     }
@@ -212,7 +212,7 @@ for (y in 1:dim(mu)[2]) {
     if (pl == 1){
       plot(DOY,eta, type = "l", col = cols[pl], 
            ylim = c(0,1),
-           title = paste("year", y))
+           main = paste("year", y))
     } else {
       lines(DOY,eta, type = "l", col = cols[pl])
     }
