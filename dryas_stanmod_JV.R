@@ -72,8 +72,8 @@ traceplot(dry_mod, pars = "alpha_year")
 traceplot(dry_mod, pars = c("sigma_mu","sigma_width"))
 
 # Rhat values
-grid.arrange(mcmc_rhat_hist(rhat(dry_mod)), 
-             mcmc_rhat(rhat(dry_mod)), 
+grid.arrange(mcmc_rhat_hist(rhat(dry_mod)),
+             mcmc_rhat(rhat(dry_mod)),
              mcmc_neff_hist(neff_ratio(dry_mod)), nrow = 2)
 
 # Regular, visual, posterior predictive checks
@@ -101,40 +101,43 @@ plot(dry_mod, pars="width")  # width parameter of the phenology
 ## ==========================================
 
 # Vector of DoYs for plotting
-DOY = seq(-2, 2, length = 100)
+plot.ids <- sort(unique(dryas_data$plot_id))
+P <- length(plot.ids)
+cols <- rainbow(P)
 
-# Posterior samples of parameters to calculate the curve
-mu = as.matrix(dry_mod, pars = "mu")
-width = as.matrix(dry_mod, pars = "width")
-alpha_year = as.matrix(dry_mod, pars = "alpha_year")
-u_plot = as.matrix(dry_mod, pars = "u_plot")
-
-eta = vector(length = length(DOY), )
-plot.id = unique(dryas_data$plot_id)
-cols = rainbow(6)
-# Loop through the years
 par(mfrow = c(3,4))
-invLogit = function(x){exp(x)/(1+exp(x))}
-for (y in 1:dim(mu)[2]) {
-  # loop through the plots
-  for (pl in 1:length(plot.id)){
-    # loop through DoYs
-    for (nd in 1:length(DOY)){
-      eta[nd] = mean( invLogit(alpha_year[,y] - ( DOY[nd] - mu[,y] )^2./width[,y]^2 + u_plot[plot.id[pl]]) )
-    }
-    if (pl == 1){
-      plot(DOY,eta, type = "l", col = cols[pl], 
-           ylim = c(0,1),
-           main = paste("year", y))
-    } else {
-      lines(DOY,eta, type = "l", col = cols[pl])
-    }
-    ind = dryas_data$plot_id==pl & dryas_data$year_id==y
-    points(dryas_data$DOYs[ind], dryas_data$tot_F[ind]/(dryas_data$tot_F[ind]+dryas_data$tot_NF[ind]), col=cols[pl])
-  }
-  
-}
 
+eta_post <- numeric(length(DOY))
+
+for (y in 1:ncol(mu)) {            # years
+  for (pl in 1:P) {                # plots
+    p_idx <- plot.ids[pl]
+    eta_hat <- numeric(length(DOY))
+
+    for (nd in 1:length(DOY)) {
+      # compute eta for each draw, then average
+     # diff <- DOY[nd] - (mu[, y] + u_plot_mu[, p_idx]) #don't forget the plot effects!
+
+      eta_post <- alpha_year[, y] +
+        u_plot[, p_idx] -
+        (DOY[nd] - (mu[, y] + u_plot_mu[, p_idx])^2) / (2 * width[, y]^2)
+
+      eta_hat[nd] <- mean(invLogit(eta_post))
+    }
+
+    if (pl == 1) {
+      plot(DOY, eta_hat, type="l", col=cols[pl],
+           ylim=c(0,1), main=paste("Year", y))
+    } else {
+      lines(DOY, eta_hat, col=cols[pl])
+    }
+
+    ind <- dryas_data$plot_id == p_idx & dryas_data$year_id == y
+    points(dryas_data$DOYs[ind],
+           dryas_data$tot_F[ind] / (dryas_data$tot_F[ind] + dryas_data$tot_NF[ind]),
+           col=cols[pl])
+  }
+}
 
 ####### Model 6b ###################
 
@@ -157,8 +160,8 @@ traceplot(dry_mod, pars = "alpha_year")
 traceplot(dry_mod, pars = c("sigma_mu","sigma_width"))
 
 # Rhat values
-grid.arrange(mcmc_rhat_hist(rhat(dry_mod)), 
-             mcmc_rhat(rhat(dry_mod)), 
+grid.arrange(mcmc_rhat_hist(rhat(dry_mod)),
+             mcmc_rhat(rhat(dry_mod)),
              mcmc_neff_hist(neff_ratio(dry_mod)), nrow = 2)
 
 # Regular, visual, posterior predictive checks
@@ -210,25 +213,25 @@ for (y in 1:dim(mu)[2]) {
       eta[nd] = mean( invLogit(alpha_year[,y] - ( DOY[nd] - (mu[,y]+u_plot_mu[plot.id[pl]]) )^2./width[,y]^2 + u_plot[plot.id[pl]]) )
     }
     if (pl == 1){
-      plot(DOY,eta, type = "l", col = cols[pl], 
+      plot(DOY,eta, type = "l", col = cols[pl],
            ylim = c(0,1),
            main = paste("year", y))
     } else {
       lines(DOY,eta, type = "l", col = cols[pl])
     }
     ind = dryas_data$plot_id==pl & dryas_data$year_id==y
-    points(dryas_data$DOYs[ind], 
-           dryas_data$tot_F[ind]/(dryas_data$tot_F[ind]+dryas_data$tot_NF[ind]), 
+    points(dryas_data$DOYs[ind],
+           dryas_data$tot_F[ind]/(dryas_data$tot_F[ind]+dryas_data$tot_NF[ind]),
            col=cols[pl])
   }
-  
+
 }
 
 
 
 
 #########################################################################
-# Below this old code 
+# Below this old code
 
 #########################################################################
 
