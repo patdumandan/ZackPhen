@@ -6,7 +6,7 @@ DOY <- seq(-2, 2, length = 100)
 
 #Dryas####
 
-drymod_draws <- dry_mod$draws()%>%posterior::as_draws_array()
+drymod_draws <- dry_mod6c$draws()%>%posterior::as_draws_array()
 
 varnames <- variables(drymod_draws)
 mu_params <- grep("^mu\\[", varnames, value = TRUE)
@@ -15,6 +15,9 @@ width_params <- grep("^width\\[", varnames, value = TRUE)
 mcmc_trace(drymod_draws, pars = mu_params)
 mcmc_trace(drymod_draws, pars = width_params)
 mcmc_trace(drymod_draws, pars = c("sigma_mu","sigma_width", "sigma_year"))
+
+plot(drymod_draws, pars="mu")     # Peak dates
+plot(drymod_draws, pars="width")  # width parameter of the phenology
 
 # Rhat values
 rhat_vals <- posterior::rhat(drymod_draws)
