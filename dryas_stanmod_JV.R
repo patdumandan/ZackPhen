@@ -101,6 +101,8 @@ plot(dry_mod, pars="width")  # width parameter of the phenology
 ## ==========================================
 
 # Vector of DoYs for plotting
+DOY = seq(-2, 2, length = 100)
+
 plot.ids <- sort(unique(dryas_data$plot_id))
 P <- length(plot.ids)
 cols <- rainbow(P)
