@@ -1,4 +1,7 @@
 //Plant only phenology model
+//simplified model structure with no plot-level peaks and year effects on peaks
+//notes: all *_z are same as *_raw in previous plant_phen versions
+
 data {
   int<lower=1> ND; //DOY pred grid, can be removed
   int<lower=1> N; //nrow/nobs
@@ -34,9 +37,9 @@ parameters {
 //and add hierarchical structure
 
   //vector[Nyr] beta_DOYsqs;  // year specific curvature (second order effect)
-  real mu_beta_DOYsq;
-  real <lower=0> sigma_beta_DOYsqs;
-  vector [Nyr] sigma_beta_DOYsqs_z;
+  real width_bar;
+  real <lower=0> sigma_width; //beta_DOYsqs
+  vector [Nyr] width_z;
 }
 
 transformed parameters {
@@ -46,7 +49,7 @@ transformed parameters {
 
   vector[Nyr] mu_year = mu_bar+sigma_mu*mu_z;
 
-  vector[Nyr] beta_DOYsqs_bar=exp(mu_beta_DOYsq+sigma_beta_DOYsqs*sigma_beta_DOYsqs_z); //curvature
+  vector[Nyr] width=exp(width_bar+sigma_width*width_z); //curvature
 
  // vector[Nyr] beta_DOYs    = -2*(mu.*beta_DOYsqs);
 
@@ -61,7 +64,8 @@ transformed parameters {
   for (n in 1:N) {
     int y = year_id[n];
 
-    eta[n] =alpha_year[y]- square(DOYs[n] - mu_year[y]) / (2 * square(beta_DOYsqs_bar[y]))+ u_plot[plot_id[n]];
+    eta[n] =alpha_year[y]+ u_plot[plot_id[n]] -
+            square(DOYs[n]-mu_year[y]) / (2*square(width_bar[y]));
 }
 }
 
@@ -98,8 +102,3 @@ generated quantities {
     y_pred[n] = binomial_rng(tot_F[n] + tot_NF[n], inv_logit(eta[n]));
 }
 
-// Warning: 16 of 8000 (0.0%) transitions ended with a divergence.
-// See https://mc-stan.org/misc/warnings for details.
-//
-// Warning: 1238 of 8000 (15.0%) transitions hit the maximum treedepth limit of 10.
-// See https://mc-stan.org/misc/warnings for details.
