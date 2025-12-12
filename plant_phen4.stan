@@ -62,10 +62,10 @@ transformed parameters {
   array[N] real eta;
 
   for (n in 1:N) {
-    int y = year_id[n];
+    //  int y= year_id[n];
 
-    eta[n] =alpha_year[y]+ u_plot[plot_id[n]] -
-            square(DOYs[n]-mu_year[y]) / (2*square(width_bar[y]));
+    eta[n]= alpha_year[year_id[n]]+ u_plot[plot_id[n]] -
+            square(DOYs[n]-mu_year[year_id[n]])/(2*square(width[year_id[n]]));
 }
 }
 
@@ -82,13 +82,13 @@ model {
   //beta_DOYsqs ~ normal(-1, 1);      // negative to force concave down
 
   // peak time -- Hierarchical priors ----
-  mu_bar   ~ normal(0, 5);
+  mu_bar   ~ normal(0, 2);
   sigma_mu ~ normal(0,1);
-  mu_z ~ normal(mu_bar, sigma_mu);
+  mu_z ~ normal(0, 1); //centered if (mu_bar, sigma_mu)
 
-  mu_beta_DOYsq ~ normal(0, 1);
-  sigma_beta_DOYsqs ~ normal (0,1);
-  sigma_beta_DOYsqs_z ~ normal(0, 1);
+  width_bar ~ normal(1, 1);
+  sigma_width ~ student_t(4, 0, 0.2);
+  width_z ~ normal(0, 1);
 
   // Likelihood
   for (i in 1:N)
