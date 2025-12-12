@@ -87,14 +87,14 @@ model {
 
   // peak time -- Hierarchical priors ----
   mu_bar   ~ normal(0, 2);
-  sigma_mu ~ normal(0,1);
+  sigma_mu ~ normal(0,0.2);
   mu_z ~ normal(0, 1); //centered if (mu_bar, sigma_mu)
 
 
   u_plot_mu_raw ~ normal(0, 1);
   sigma_mu_plot ~ normal(0, 2);
 
-  width_bar ~ normal(1, 1);
+  width_bar ~ normal(log(15), 0.3);
   sigma_width ~ student_t(4, 0, 0.2);
   width_z ~ normal(0, 1);
 
