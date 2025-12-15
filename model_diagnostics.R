@@ -4,6 +4,12 @@ library(posterior)
 
 #Dryas####
 
+mu_draws= dry_mod6b1$draws("mu_year")
+mcmc_areas(mu_draws, regex = "mu_year")
+
+width_draws= dry_mod6b1$draws("width")
+mcmc_areas(width_draws, regex = "width")
+
 drymod6b1_draws <- dry_mod6b1$draws()%>%posterior::as_draws_array()
 
 varnames <- variables(drymod_draws)
@@ -13,12 +19,6 @@ width_params <- grep("^width\\[", varnames, value = TRUE)
 mcmc_trace(drymod_draws, pars = mu_params)
 mcmc_trace(drymod_draws, pars = width_params)
 mcmc_trace(drymod_draws, pars = c("sigma_mu","sigma_width", "sigma_year"))
-
-mu_draws= dry_mod6b1$draws("mu_year")
-mcmc_areas(mu_draws, regex = "mu_year")
-
-width_draws= dry_mod6b1$draws("width")
-mcmc_areas(width_draws, regex = "width")
 
 # Rhat values
 ess_vals <- posterior::ess_bulk(drymod6b1_draws)
@@ -308,3 +308,130 @@ for (pl in plot.ids) {   # LOOP OVER PLOTS
   }
 }
 
+#saxifraga####
+
+saxmod6b_draws <- sax_mod6b$draws()%>%posterior::as_draws_array()
+
+ess_vals <- posterior::ess_bulk(saxmod6b_draws)
+n_draws  <- posterior::ndraws(saxmod6b_draws)
+
+neff_ratio_vals <- ess_vals / n_draws
+
+p1= mcmc_rhat_hist(sax_mod6b$summary()$rhat)
+p2= mcmc_rhat(sax_mod6b$summary()$rhat)
+p3= mcmc_neff_hist(neff_ratio_vals, bins=10)
+
+ggarrange(p1, p2, p3, ncol = 3)
+
+# Regular, visual, posterior predictive checks
+color_scheme_set("blue")
+yrep = sax_mod6b$draws(format="draws_matrix", variables="y_pred")
+yrep <- yrep[(nrow(yrep)-99):nrow(yrep), ]  # replicate data, take only the last 100 samples to speed up drawing
+ggarrange(ppc_dens_overlay(y = sax_datA$tot_F,
+                           yrep = yrep),
+          ppc_ecdf_overlay(y = sax_datA$tot_F,
+                           yrep = yrep),
+          ppc_pit_ecdf(y = sax_datA$tot_F, yrep = yrep, prob = 0.99, plot_diff = FALSE),
+          ppc_pit_ecdf(y = sax_datA$tot_F, yrep = yrep, prob = 0.99, plot_diff = TRUE),
+          nrow = 2, ncol=2)
+
+
+mu_draws= sax_mod6b$draws("mu")
+mcmc_areas(mu_draws, regex = "mu")
+
+width_draws= sax_mod6b$draws("width")
+mcmc_areas(width_draws, regex = "width")
+
+mu         <- sax_mod6b$draws("mu", format="draws_matrix")
+width      <- sax_mod6b$draws("width", format="draws_matrix")
+alpha_year <- sax_mod6b$draws("alpha_year", format="draws_matrix")
+u_plot     <- sax_mod6b$draws("u_plot", format="draws_matrix")
+u_plot_mu  <- sax_mod6b$draws("u_plot_mu", format="draws_matrix")
+
+#per year####
+DOY = seq(-2, 2, length = 100)
+invLogit <- function(x) exp(x) / (1 + exp(x))
+
+plot.ids <- sort(unique(saxifraga_data$plot_id))
+P <- length(plot.ids)
+cols <- rainbow(P)
+
+par(mfrow = c(3,4))
+
+eta_post <- numeric(length(DOY)) #posterior preds
+
+for (y in 1:ncol(mu)) {            # years
+  for (pl in 1:P) {                # plots
+    p_idx <- plot.ids[pl]
+    eta_hat <- numeric(length(DOY))
+
+    for (nd in 1:length(DOY)) {
+      # compute eta for each draw, then average
+
+      eta_post= alpha_year[, y]+u_plot[, p_idx] -
+        (DOY[nd]-(mu[, y] + u_plot_mu[, p_idx]))^2/(width[, y]^2)
+
+      eta_hat[nd] <- mean(invLogit(eta_post))
+    }
+
+    if (pl == 1) {
+      plot(DOY, eta_hat, type="l", col=cols[pl],
+           ylim=c(0,1), main=paste("Year", y))
+    } else {
+      lines(DOY, eta_hat, col=cols[pl])
+    }
+
+    ind <- saxifraga_data$plot_id == p_idx & saxifraga_data$year_id == y
+    points(saxifraga_data$DOYs[ind],
+           saxifraga_data$tot_F[ind] / (saxifraga_data$tot_F[ind] + saxifraga_data$tot_NF[ind]),
+           col=cols[pl])
+  }
+}
+
+#per plot####
+DOY <- seq(-2, 2, length = 100)
+invLogit <- function(x) exp(x) / (1 + exp(x))
+
+year.ids <- sort(unique(saxifraga_data$year_id))
+YR <- length(year.ids)
+cols <- rainbow(YR)
+
+plot.ids <- sort(unique(saxifraga_data$plot_id))
+P <- length(plot.ids)
+
+par(mfrow = c(3, 1))
+
+for (pl in plot.ids) {                 # LOOP OVER PLOTS
+
+  plot(NULL, xlim = range(DOY), ylim = c(0, 1),
+       xlab = "DOY", ylab = "Proportion F",
+       main = paste("Plot", pl))
+
+  for (y in 1:YR) {                    # LOOP OVER YEARS
+
+    yr_idx <- year.ids[y]
+    eta_hat <- numeric(length(DOY))
+
+    for (nd in seq_along(DOY)) {
+
+      eta_post <- alpha_year[, y] +
+        u_plot[, pl] -
+        (DOY[nd] - (mu[, y] + u_plot_mu[, pl]))^2 /
+        (width[, y]^2)
+
+      eta_hat[nd] <- mean(invLogit(eta_post))
+    }
+
+    # posterior mean line for this year
+    lines(DOY, eta_hat, col = cols[y], lwd = 2)
+
+    # observed data
+    ind <- saxifraga_data$plot_id == pl &
+      saxifraga_data$year_id == yr_idx
+
+    points(saxifraga_data$DOYs[ind],
+           saxifraga_data$tot_F[ind] /
+             (saxifraga_data$tot_F[ind] + saxifraga_data$tot_NF[ind]),
+           col = cols[y], pch = 16)
+  }
+}
