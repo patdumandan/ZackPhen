@@ -49,7 +49,7 @@ transformed parameters {
 
   vector[Nyr] alpha_year = alpha+sigma_year*alpha_year_z;
 
-  vector[Nyr] mu_year = mu_bar+sigma_mu*mu_z;
+  vector[Nyr] mu = mu_bar+sigma_mu*mu_z;
 
   vector[Nplots] u_plot_mu = u_plot_mu_raw*sigma_mu_plot; //plot-specific peak times
 
@@ -69,7 +69,7 @@ transformed parameters {
     //  int y= year_id[n];
 
     eta[n]= alpha_year[year_id[n]]+ u_plot[plot_id[n]] -
-            square(DOYs[n]-mu_year[year_id[n]]+ u_plot_mu[plot_id[n]])/(2*square(width[year_id[n]]));
+            square(DOYs[n]-mu[year_id[n]]+ u_plot_mu[plot_id[n]])/(2*square(width[year_id[n]]));
 }
 }
 
@@ -87,14 +87,14 @@ model {
 
   // peak time -- Hierarchical priors ----
   mu_bar   ~ normal(0, 2);
-  sigma_mu ~ normal(0,0.2);
+  sigma_mu ~ student_t(4, 0, 0.2); //normal(0,0.2);
   mu_z ~ normal(0, 1); //centered if (mu_bar, sigma_mu)
 
 
   u_plot_mu_raw ~ normal(0, 1);
   sigma_mu_plot ~ normal(0, 2);
 
-  width_bar ~ normal(log(15), 0.3);
+  width_bar ~ normal(1,1);
   sigma_width ~ student_t(4, 0, 0.2);
   width_z ~ normal(0, 1);
 
