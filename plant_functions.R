@@ -14,13 +14,24 @@ make_stan_data <- function(df, global_df) {
        DOY_mean = mean(global_df$DOY))
 }
 
-fit_species_model <- function(species_name, data, model, out_dir = "models") {
+fit_species_model <- function(
+    species_name,
+    data,
+    model,
+    out_dir = "models",
+    csv_dir = "cmdstan_csv") {
 
   message("Fit model for: ", species_name)
 
   sp_df <- data %>% filter(species == species_name)
 
   stan_data <- make_stan_data(sp_df, data)
+
+  # Ensure output directories exist
+  if (!dir.exists(out_dir)) dir.create(out_dir, recursive = TRUE)
+
+  species_csv_dir <- file.path(csv_dir, species_name)
+  if (!dir.exists(species_csv_dir)) dir.create(species_csv_dir, recursive = TRUE)
 
   fit <- model$sample(
     data = stan_data,
@@ -29,14 +40,14 @@ fit_species_model <- function(species_name, data, model, out_dir = "models") {
     parallel_chains = 4,
     iter_sampling = 2000,
     iter_warmup = 500,
-    output_dir = "cmdstan_csv")
+    output_dir = species_csv_dir,
+    save_warmup = TRUE)
 
-  if (!dir.exists(out_dir)) dir.create(out_dir)
-
-  saveRDS(fit,file = file.path(out_dir, paste0("phenology_", species_name, ".rds")))
+  saveRDS(fit, file = file.path(out_dir, paste0("phenology_", species_name, ".rds")))
 
   return(fit)
 }
+
 
 extract_diagnostics <- function(fit) {
 
@@ -46,11 +57,9 @@ extract_diagnostics <- function(fit) {
   n_draws  <- posterior::ndraws(draws_array)
   neff_ratio_vals <- ess_vals / n_draws
 
-  list(
-    draws_array = draws_array,
-    rhat = fit$summary()$rhat,
-    neff_ratio = neff_ratio_vals
-  )
+  list(draws_array = draws_array,
+       rhat = fit$summary()$rhat,
+       neff_ratio = neff_ratio_vals)
 }
 
 plot_mcmc_diagnostics <- function(diagnost_list) {
@@ -62,17 +71,16 @@ plot_mcmc_diagnostics <- function(diagnost_list) {
   ggarrange(p1, p2, p3, ncol = 3)
 }
 
-pars=c("mu")
 
 chain_check <- function(fit, pars) {
   draws <-fit$draws()%>%posterior::as_draws_array()
 
-  varnames <- variables(draws)
-  mu_params <- grep("^mu\\[", varnames, value = TRUE)
-  width_params <- grep("^width\\[", varnames, value = TRUE)
+  # varnames <- variables(draws)
+  # mu_params <- grep("^mu\\[", varnames, value = TRUE)
+  # width_params <- grep("^width\\[", varnames, value = TRUE)
 
-  mcmc_trace(draws, pars = mu_params)
-  mcmc_trace(draws, pars = width_params)
+  #mcmc_trace(draws, pars = mu_params)
+  #mcmc_trace(draws, pars = width_params)
   mcmc_trace(draws, pars = c("sigma_mu","sigma_width", "sigma_year"))
 }
 
@@ -89,67 +97,79 @@ plot_ppc <- function(fit, y_obs, yrep_var = "y_pred", ndraws = 100) {
     ppc_ecdf_overlay(y = y_obs, yrep = yrep),
     ppc_pit_ecdf(y = y_obs, yrep = yrep, prob = 0.99, plot_diff = FALSE),
     ppc_pit_ecdf(y = y_obs, yrep = yrep, prob = 0.99, plot_diff = TRUE),
-    nrow = 2, ncol = 2
-  )
+    nrow = 2, ncol = 2)
 }
 
-run_model_diagnostics <- function(
-    fit,
-    species_name,
-    data,
-    pars,
-    out_dir = "diagnostics"
-) {
+run_model_diagnostics <- function(species_name, data, pars,
+                                  model_dir = "C:\\pdumandanSLU\\PatD-SLU\\SLU\\phenology-project\\ZackPhen\\models\\",
+                                  out_dir = "diagnostics") {
 
   message("Running diagnostics for: ", species_name)
 
-  # Ensure central diagnostics directory exists
+  #open file
+  model_file <- file.path(model_dir,paste0("phenology_", species_name, ".rds"))
+
+  if (!file.exists(model_file)) {
+    stop("Model file not found: ", model_file)
+  }
+
+  #read model
+  fit <- readRDS(model_file)
+
   if (!dir.exists(out_dir)) dir.create(out_dir, recursive = TRUE)
 
-  sp_df <- data %>% filter(species == species_name)
+  sp_df <- data %>% dplyr::filter(species == species_name)
 
   diag <- extract_diagnostics(fit)
 
-  # ---- Rhat / Neff ----
-  pdf(
-    file.path(out_dir, paste0(species_name, "_mcmc_diagnostics.pdf")),
-    width = 12, height = 4
-  )
+  #Rhat / Neff
+  pdf(file.path(out_dir, paste0(species_name, "_mcmc_diagnostics.pdf")),width = 12, height = 4)
   print(plot_mcmc_diagnostics(diag))
   dev.off()
 
-  # ---- Caterpillar plots ----
-  pdf(
-    file.path(out_dir, paste0(species_name, "_caterpillar_plots.pdf")),
-    width = 8, height = 6
-  )
+  # chains
+  pdf(file.path(out_dir, paste0(species_name, "_caterpillar_plots.pdf")),width = 8, height = 6)
   print(chain_check(fit, pars))
   dev.off()
 
-  # ---- Posterior predictive checks ----
-  pdf(
-    file.path(out_dir, paste0(species_name, "_ppc_plots.pdf")),
-    width = 10, height = 8
-  )
+  # ppc
+  pdf(file.path(out_dir, paste0(species_name, "_ppc_plots.pdf")),width = 10, height = 8)
   print(plot_ppc(fit, y_obs = sp_df$tot_F))
   dev.off()
 
   invisible(TRUE)
 }
 
+plot_params= function(species_name, data,
+                      model_dir = "C:\\pdumandanSLU\\PatD-SLU\\SLU\\phenology-project\\ZackPhen\\models\\",
+                      out_dir = "predictions") {
 
-plot_mu_est <- function(fit) {
+  message("Plotting predictions for: ", species_name)
+
+  #open file
+  model_file <- file.path(model_dir,paste0("phenology_", species_name, ".rds"))
+
+  if (!file.exists(model_file)) {
+    stop("Model file not found: ", model_file)
+  }
+
+  #read model
+  fit <- readRDS(model_file)
+
+  if (!dir.exists(out_dir)) dir.create(out_dir, recursive = TRUE)
+
+  sp_df <- data %>% dplyr::filter(species == species_name)
 
   mu_draws= fit$draws("mu")
-  mcmc_areas(mu_draws, regex = "mu")
-}
-
-plot_width_est <- function(fit) {
-
   width_draws= fit$draws("width")
-  mcmc_areas(width_draws, regex = "width")
-}
 
+  #peak and width
+  pdf(file.path(out_dir, paste0(species_name, "_params.pdf")),width = 12, height = 4)
+  m1=mcmc_areas(mu_draws, regex = "mu")+ labs(paste0("Peak timing of ", species_name))
+  m2=mcmc_areas(width_draws, regex = "width")+ labs(paste0("Width of ", species_name))
+  ggarrange(m1, m2, ncol = 2)
+  dev.off()
+}
 
 
 ###moving window###
