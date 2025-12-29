@@ -12,7 +12,7 @@ data {
   array[N] real<lower=0> obs_days;       // trapping effort (offset)
 
   vector[N] DOYs;                        // standardized DOY
-  vector[N] DOYsqs;                      // DOY^2 (quadratic term)
+ // vector[N] DOYsqs;                      // DOY^2 (quadratic term)
 
   vector[Nyr] year_vec;
 }

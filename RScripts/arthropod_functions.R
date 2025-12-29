@@ -1,20 +1,20 @@
-make_plant_data <- function(df, global_df) {
+make_arth_data <- function(df, global_df) {
   years <- unique(df$year)
   list(N= nrow(df),
-       tot_F= df$tot_F,
-       tot_NF= df$tot_NF,
-       Nyr= length(years),
+       y=df$TotalCatch1,
+       obs_days=df$TrapDays,
+       Nyr = length(unique(df$Year)),
        year_id= as.integer(factor(df$year)),
        DOYs= df$DOYs,
-       year= df$year,
-       year_vec = (years-mean(years))/sd(years),
+       year= df$Year,
+       year_vec = (year-mean(year))/sd(year),
        Nplots  = length(unique(df$plot_id)),
        plot_id = df$plot_id,
        DOY_sd  = sd(global_df$DOY),
        DOY_mean = mean(global_df$DOY))
 }
 
-fit_plant_model <- function(
+fit_arth_model <- function(
     species_name,
     data,
     model,
@@ -25,7 +25,7 @@ fit_plant_model <- function(
 
   sp_df <- data %>% filter(species == species_name)
 
-  plant_data <- make_plant_data(sp_df, data)
+  arth_data <- make_arth_data(sp_df, data)
 
   # Ensure output directories exist
   if (!dir.exists(out_dir)) dir.create(out_dir, recursive = TRUE)
@@ -34,7 +34,7 @@ fit_plant_model <- function(
   if (!dir.exists(species_csv_dir)) dir.create(species_csv_dir, recursive = TRUE)
 
   fit <- model$sample(
-    data = plant_data,
+    data = arth_data,
     seed = 123,
     chains = 4,
     parallel_chains = 4,
@@ -47,7 +47,6 @@ fit_plant_model <- function(
 
   return(fit)
 }
-
 
 extract_diagnostics <- function(fit) {
 
@@ -71,7 +70,6 @@ plot_mcmc_diagnostics <- function(diagnost_list) {
   ggarrange(p1, p2, p3, ncol = 3)
 }
 
-
 chain_check <- function(fit, pars) {
   draws <-fit$draws()%>%posterior::as_draws_array()
 
@@ -81,7 +79,7 @@ chain_check <- function(fit, pars) {
 
   #mcmc_trace(draws, pars = mu_params)
   #mcmc_trace(draws, pars = width_params)
-  mcmc_trace(draws, pars = c("sigma_mu","sigma_width", "sigma_year"))
+  mcmc_trace(draws, pars = c("sigma_mu","sigma_width", "sigma_year", "phi"))
 }
 
 plot_ppc <- function(fit, y_obs, yrep_var = "y_pred", ndraws = 100) {
@@ -174,9 +172,9 @@ plot_params= function(species_name, data,
   dev.off()
 }
 
-plot_plant_preds <- function(species_name, data,
-                       model_dir = "C:\\pdumandanSLU\\PatD-SLU\\SLU\\phenology-project\\ZackPhen\\models\\",
-                       out_dir = "predictions") {
+plot_arth_preds <- function(species_name, data,
+                            model_dir = "C:\\pdumandanSLU\\PatD-SLU\\SLU\\phenology-project\\ZackPhen\\models\\",
+                            out_dir = "predictions") {
 
   message("Plotting predictions of: ", species_name)
 
@@ -195,10 +193,10 @@ plot_plant_preds <- function(species_name, data,
   alpha_year <- fit$draws("alpha_year", format="draws_matrix")
   u_plot     <- fit$draws("u_plot", format="draws_matrix")
   u_plot_mu  <- fit$draws("u_plot_mu", format="draws_matrix")
+  obs_days   <- data$TrapDays
 
   # Setup
   DOY <- seq(-2, 2, length.out=100)
-  invLogit <- invLogit <- function(x) exp(x) / (1 + exp(x))#plogis
 
   plot_ids = sort(unique(sp_df$plot_id))
   year_ids = sort(as.integer(factor(sp_df$year)))
@@ -225,71 +223,27 @@ plot_plant_preds <- function(species_name, data,
 
       for (nd in seq_along(DOY)) {
         eta_post <- alpha_year[, y_idx] + u_plot[, pl_idx] -
-          (DOY[nd] - (mu[, y_idx] + u_plot_mu[, pl_idx]))^2 / (width[, y_idx]^2)
-        eta_hat[nd] <- mean(invLogit(eta_post))
+          ((DOY[nd] - (mu[, y_idx] + u_plot_mu[, pl_idx]))^2 / (width[, y_idx]^2)) +
+          log(obs_days[nd])
+
+        eta_hat[nd] <- mean(exp(eta_post))
       }
 
       if (pl == 1) {
         plot(DOY, eta_hat, type="l", col=cols[pl],
-             ylim=c(0,1), main=paste(species_name, "Year", y),
-             xlab="Scaled DOY", ylab="Proportion flowering")
+             main=paste(species_name, "Year", y),
+             xlab="Scaled DOY", ylab="Abundance")
       } else {
         lines(DOY, eta_hat, col=cols[pl])
       }
 
       # raw points
-      ind <- sp_df$plot_id == p_id & sp_df$year == y
-      points(sp_df$DOYs[ind],
-             sp_df$tot_F[ind] / (sp_df$tot_F[ind] + sp_df$tot_NF[ind]),
+      ind <- sp_df$plot_id == p_id & sp_df$Year == y
+      points(sp_df$y[ind],
              col=cols[pl], pch=16)
     }
   }
 
   dev.off()
-}
-
-###moving window###
-rolling_mod=function(split) {
-
-  analysis_set=analysis(split)
-  Plot=analysis_set[, "Plot"]
-
-  fit_model= lme4::glmer(analysis_set[, "DOY"]~analysis_set[, "Year"]+
-                           (1|Plot),data=analysis_set)
-  return(summary(fit_model))
-
-}
-rolling_plot=function(split, slope, intercept) {
-
-  analysis_set=analysis(split)
-  slope=slope
-  intercept=intercept
-
-  plot_model=ggplot2::ggplot(data=analysis_set,
-                             aes(x=as.integer(analysis_set[, "Year"]), y=analysis_set[, "DOY"]))+
-    geom_point()+
-    geom_abline(slope=slope, intercept=intercept)+theme_classic()+
-    ylab("DOY")+ xlab("Year")+
-    stat_smooth(method="lm")
-
-  print(plot_model)
-}
-
-get_year=function(split) {
-
-  analysis_set=analysis(split)
-
-  start_yr=as.numeric(analysis_set[,"Year"][1])
-
-}
-
-get_dat=function(split) {
-
-  analysis_set=analysis(split)
-
-  yr=as.vector(analysis_set[,"Year"])
-  doys=as.vector(analysis_set[,"DOY"])
-
-  return(cbind(yr, doys))
 }
 
