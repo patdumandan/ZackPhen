@@ -20,7 +20,7 @@ plant_datA=read.csv(dat_name, header=T, sep=',',  stringsAsFactors = F)
 species_list= unique(plant_datA$species)
 
 #model####
-plant_mod=cmdstan_model("plant_phen6b.stan")
+plant_mod=cmdstan_model("RScripts/plant_phen6b.stan")
 
 fits= lapply(species_list, fit_species_model,data= plant_datA, model= plant_mod)
 

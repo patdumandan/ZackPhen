@@ -1,13 +1,13 @@
 make_arth_data <- function(df, global_df) {
-  years <- unique(df$year)
+  years <- unique(df$Year)
   list(N= nrow(df),
        y=df$TotalCatch1,
        obs_days=df$TrapDays,
        Nyr = length(unique(df$Year)),
-       year_id= as.integer(factor(df$year)),
+       year_id= as.integer(factor(df$Year)),
        DOYs= df$DOYs,
        year= df$Year,
-       year_vec = (year-mean(year))/sd(year),
+       year_vec = (years-mean(years))/sd(years),
        Nplots  = length(unique(df$plot_id)),
        plot_id = df$plot_id,
        DOY_sd  = sd(global_df$DOY),
@@ -23,7 +23,7 @@ fit_arth_model <- function(
 
   message("Fit model for: ", species_name)
 
-  sp_df <- data %>% filter(species == species_name)
+  sp_df <- data %>% filter(HoyeTaxon == species_name)
 
   arth_data <- make_arth_data(sp_df, data)
 
@@ -70,7 +70,7 @@ plot_mcmc_diagnostics <- function(diagnost_list) {
   ggarrange(p1, p2, p3, ncol = 3)
 }
 
-chain_check <- function(fit, pars) {
+chain_check <- function(fit) {
   draws <-fit$draws()%>%posterior::as_draws_array()
 
   # varnames <- variables(draws)
@@ -98,7 +98,7 @@ plot_ppc <- function(fit, y_obs, yrep_var = "y_pred", ndraws = 100) {
     nrow = 2, ncol = 2)
 }
 
-run_model_diagnostics <- function(species_name, data, pars,
+run_model_diagnostics <- function(species_name, data,
                                   model_dir = "C:\\pdumandanSLU\\PatD-SLU\\SLU\\phenology-project\\ZackPhen\\models\\",
                                   out_dir = "diagnostics") {
 
@@ -116,7 +116,7 @@ run_model_diagnostics <- function(species_name, data, pars,
 
   if (!dir.exists(out_dir)) dir.create(out_dir, recursive = TRUE)
 
-  sp_df <- data %>% dplyr::filter(species == species_name)
+  sp_df <- data %>% dplyr::filter(HoyeTaxon == species_name)
 
   diag <- extract_diagnostics(fit)
 
@@ -127,12 +127,12 @@ run_model_diagnostics <- function(species_name, data, pars,
 
   # chains
   pdf(file.path(out_dir, paste0(species_name, "_caterpillar_plots.pdf")),width = 8, height = 6)
-  print(chain_check(fit, pars))
+  print(chain_check(fit))
   dev.off()
 
   # ppc
   pdf(file.path(out_dir, paste0(species_name, "_ppc_plots.pdf")),width = 10, height = 8)
-  print(plot_ppc(fit, y_obs = sp_df$tot_F))
+  print(plot_ppc(fit, y_obs = sp_df$TotalCatch1))
   dev.off()
 
   invisible(TRUE)
@@ -156,7 +156,7 @@ plot_params= function(species_name, data,
 
   if (!dir.exists(out_dir)) dir.create(out_dir, recursive = TRUE)
 
-  sp_df <- data %>% dplyr::filter(species == species_name)
+  sp_df <- data %>% dplyr::filter(HoyeTaxon == species_name)
 
   mu_draws= fit$draws("mu")
   width_draws= fit$draws("width")
@@ -186,7 +186,7 @@ plot_arth_preds <- function(species_name, data,
   if (!dir.exists(out_dir)) dir.create(out_dir, recursive = TRUE)
 
   # Subset data
-  sp_df <- dplyr::filter(data, species == species_name)
+  sp_df <- dplyr::filter(data, HoyeTaxon == species_name)
 
   mu         <- fit$draws("mu", format="draws_matrix")
   width      <- fit$draws("width", format="draws_matrix")
@@ -196,6 +196,8 @@ plot_arth_preds <- function(species_name, data,
   obs_days   <- data$TrapDays
 
   # Setup
+  log_obs_days <- log(mean(sp_df$TrapDays, na.rm = TRUE))
+
   DOY <- seq(-2, 2, length.out=100)
 
   plot_ids = sort(unique(sp_df$plot_id))
@@ -208,7 +210,7 @@ plot_arth_preds <- function(species_name, data,
   par(mfrow=c(4, 4))
 
   plot_ids <- sort(unique(sp_df$plot_id))
-  year_ids <- sort(unique(sp_df$year))  # actual year numbers
+  year_ids <- sort(unique(sp_df$Year))  # actual year numbers
   P <- length(plot_ids)
   cols <- rainbow(P)
 
@@ -222,11 +224,11 @@ plot_arth_preds <- function(species_name, data,
       eta_hat <- numeric(length(DOY))
 
       for (nd in seq_along(DOY)) {
-        eta_post <- alpha_year[, y_idx] + u_plot[, pl_idx] -
+        eta_post <- exp(alpha_year[, y_idx] + u_plot[, pl_idx] -
           ((DOY[nd] - (mu[, y_idx] + u_plot_mu[, pl_idx]))^2 / (width[, y_idx]^2)) +
-          log(obs_days[nd])
+          log_obs_days)
 
-        eta_hat[nd] <- mean(exp(eta_post))
+        eta_hat[nd] <- mean(eta_post)
       }
 
       if (pl == 1) {
@@ -239,7 +241,7 @@ plot_arth_preds <- function(species_name, data,
 
       # raw points
       ind <- sp_df$plot_id == p_id & sp_df$Year == y
-      points(sp_df$y[ind],
+      points(sp_df$DOYs[ind], sp_df$TotalCatch1[ind],
              col=cols[pl], pch=16)
     }
   }

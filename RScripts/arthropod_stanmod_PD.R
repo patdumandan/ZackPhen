@@ -6,6 +6,8 @@ library(tidyr)
 library(bayesplot)
 library(posterior)
 
+source("RScripts/arthropod_functions.R")
+
 #data####
 dat_path="C:\\pdumandanSLU\\PatD-SLU\\SLU\\phenology-project\\ZackPhen\\data"
 arth_name=paste(dat_path, '\\arth_datA','.csv', sep = '')
@@ -24,3 +26,9 @@ names(arth_fits)= species_list
 
 #diagnostics####
 diagnost_arth=lapply(species_list, run_model_diagnostics, data=arth_datA)
+
+#param estimates####
+params_arth=lapply(species_list, plot_params, data=arth_datA)
+
+#predictions####
+preds_arth=lapply(species_list, plot_arth_preds, data=arth_datA)
