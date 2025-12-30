@@ -248,48 +248,89 @@ plot_plant_preds <- function(species_name, data,
   dev.off()
 }
 
-###moving window###
-rolling_mod=function(split) {
-
-  analysis_set=analysis(split)
-  Plot=analysis_set[, "Plot"]
-
-  fit_model= lme4::glmer(analysis_set[, "DOY"]~analysis_set[, "Year"]+
-                           (1|Plot),data=analysis_set)
-  return(summary(fit_model))
-
-}
-rolling_plot=function(split, slope, intercept) {
-
-  analysis_set=analysis(split)
-  slope=slope
-  intercept=intercept
-
-  plot_model=ggplot2::ggplot(data=analysis_set,
-                             aes(x=as.integer(analysis_set[, "Year"]), y=analysis_set[, "DOY"]))+
-    geom_point()+
-    geom_abline(slope=slope, intercept=intercept)+theme_classic()+
-    ylab("DOY")+ xlab("Year")+
-    stat_smooth(method="lm")
-
-  print(plot_model)
+#sliding window####
+fit_slopes_per_window <- function(dat) {
+  dat %>%
+    group_by(.draw) %>%
+    summarise(
+      slope = coef(lm(DOY_peak ~ year))[2],
+      .groups = "drop")
 }
 
-get_year=function(split) {
-
-  analysis_set=analysis(split)
-
-  start_yr=as.numeric(analysis_set[,"Year"][1])
-
+summarize_slopes <- function(slope_draws, dat) {
+  tibble(
+    start_yr = min(dat$year),
+    end_yr   = max(dat$year),
+    slope_mean  = mean(slope_draws$slope),
+    slope_med   = median(slope_draws$slope),
+    slope_lwr   = quantile(slope_draws$slope, 0.025),
+    slope_upr   = quantile(slope_draws$slope, 0.975))
 }
 
-get_dat=function(split) {
-
-  analysis_set=analysis(split)
-
-  yr=as.vector(analysis_set[,"Year"])
-  doys=as.vector(analysis_set[,"DOY"])
-
-  return(cbind(yr, doys))
-}
-
+# increasing_mod=function(slide_list) {
+#   lapply(slide_list, function(dat) {
+#     slope <-as.numeric(coef(glm(mean ~ year, data = dat))[2])
+#     return(slope)
+#   })
+# }
+#
+# get_start_years <- function(slide_list) {
+#   lapply(slide_list, function(df) {
+#
+#     start_year = as.numeric(min(df$year, na.rm = TRUE))
+#     return(start_year)
+#   })
+# }
+#
+# get_end_years <- function(slide_list) {
+#   lapply(slide_list, function(df) {
+#
+#     end_year = as.numeric(max(df$year, na.rm = TRUE))
+#     return(end_year)
+#   })
+# }
+# # ###moving window###
+# # rolling_mod=function(split) {
+# #
+# #   analysis_set=analysis(split)
+# #   Plot=analysis_set[, "Plot"]
+# #
+# #   fit_model= lme4::glmer(analysis_set[, "DOY"]~analysis_set[, "Year"]+
+# #                            (1|Plot),data=analysis_set)
+# #   return(summary(fit_model))
+# #
+# # }
+# # rolling_plot=function(split, slope, intercept) {
+# #
+# #   analysis_set=analysis(split)
+# #   slope=slope
+# #   intercept=intercept
+# #
+# #   plot_model=ggplot2::ggplot(data=analysis_set,
+# #                              aes(x=as.integer(analysis_set[, "Year"]), y=analysis_set[, "DOY"]))+
+# #     geom_point()+
+# #     geom_abline(slope=slope, intercept=intercept)+theme_classic()+
+# #     ylab("DOY")+ xlab("Year")+
+# #     stat_smooth(method="lm")
+# #
+# #   print(plot_model)
+# # }
+# #
+# # get_year=function(split) {
+# #
+# #   analysis_set=analysis(split)
+# #
+# #   start_yr=as.numeric(analysis_set[,"Year"][1])
+# #
+# # }
+# #
+# # get_dat=function(split) {
+# #
+# #   analysis_set=analysis(split)
+# #
+# #   yr=as.vector(analysis_set[,"Year"])
+# #   doys=as.vector(analysis_set[,"DOY"])
+# #
+# #   return(cbind(yr, doys))
+# # }
+# #

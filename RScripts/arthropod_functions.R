@@ -193,17 +193,11 @@ plot_arth_preds <- function(species_name, data,
   alpha_year <- fit$draws("alpha_year", format="draws_matrix")
   u_plot     <- fit$draws("u_plot", format="draws_matrix")
   u_plot_mu  <- fit$draws("u_plot_mu", format="draws_matrix")
-  obs_days   <- data$TrapDays
 
   # Setup
   log_obs_days <- log(mean(sp_df$TrapDays, na.rm = TRUE))
 
   DOY <- seq(-2, 2, length.out=100)
-
-  plot_ids = sort(unique(sp_df$plot_id))
-  year_ids = sort(as.integer(factor(sp_df$year)))
-  P <- length(plot_ids)
-  cols <- rainbow(P)
 
   # PDF
   pdf(file.path(out_dir, paste0(species_name, "_preds.pdf")))
