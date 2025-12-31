@@ -407,7 +407,808 @@ papp=ggplot(papaver_peak_slope_ci,
   theme(axis.text.x = element_text(hjust = 1),
         plot.title = element_text(face = "bold"))
 
-#plot####
+#PLANT PLOTS####
 ggarrange(dryp,silp)
 ggarrange(casp,papp)
 ggarrange(salp,saxp)
+
+dat_path="C:\\pdumandanSLU\\PatD-SLU\\SLU\\phenology-project\\ZackPhen\\data"
+arth_name=paste(dat_path, '\\arth_datA','.csv', sep = '')
+
+arth_datA=read.csv(arth_name, header=T, sep=',',  stringsAsFactors = F)
+#or: arth_datA=read.csv("https://raw.githubusercontent.com/patdumandan/ZackPhen/refs/heads/main/data/arth_datA.csv")
+
+#Muscidae####
+mus_datA=arth_datA%>%filter(HoyeTaxon=="Muscidae")
+
+#extract peak DOY
+mus_fit=readRDS("C:\\pdumandanSLU\\PatD-SLU\\SLU\\phenology-project\\ZackPhen\\models\\phenology_Muscidae.rds")
+
+musdraws_doy=mus_fit$draws(variable="mu", format="df")
+
+musyears <- sort(unique(mus_datA$Year))
+
+muspeak_df <- as_draws_df(musdraws_doy)%>%
+  mutate(.draw = row_number())%>%
+  tidyr::pivot_longer(
+    cols = starts_with("mu"),
+    names_pattern = "mu\\[(\\d+)\\]",
+    names_to = "year_index",
+    values_to = "DOY_peak_std")%>%select(year_index, DOY_peak_std, .draw)%>%
+  mutate(DOY_peak=DOY_peak_std*DOY_sd+DOY_mean,
+         year_index = as.integer(year_index),
+         year = musyears[year_index])
+
+mussummary_peak <- muspeak_df%>%
+  group_by(year)%>%
+  summarise(
+    mean  = mean(DOY_peak),
+    median= median(DOY_peak),
+    lower= quantile(DOY_peak, 0.05),
+    upper= quantile(DOY_peak, 0.95))
+
+step_size=1
+nyr=length(unique(mus_datA$year))
+
+years_all <- sort(unique(muspeak_df$Year))
+
+musp_slide_draws <- list()
+
+for (nyr in seq(5, 29, by = 1)) {
+  for (start in seq(1, length(years_all) - nyr + 1)) {
+
+    yrs <- years_all[start:(start + nyr - 1)]
+
+    musp_slide_draws[[length(musp_slide_draws) + 1]] <-
+      muspeak_df %>% filter(year %in% yrs)
+  }}
+
+mus_slopes_draws <- lapply(musp_slide_draws, fit_slopes_per_window)
+
+muscidae_peak_slope_ci <- map2_dfr(mus_slopes_draws,musp_slide_draws, summarize_slopes)%>%
+  mutate(TSL = end_yr - start_yr + 1,
+         CI_width = slope_upr - slope_lwr,
+         year = musyears[start_yr])
+
+musp=ggplot(muscidae_peak_slope_ci,
+            aes(x = TSL, y = year)) +
+  geom_point(aes(size = CI_width,fill = slope_mean),
+             shape = 21, color = "black",alpha = 0.7) +
+  scale_size_continuous(name = "95% CI width",range = c(1, 6)) +
+  scale_fill_gradient2(low = "blue", mid = "white", high = "red",midpoint = 0,
+                       name = "Trend (slope)") +
+  theme_classic() +
+  labs(x = "Time-series length (years)",y = "Start year",
+       title = "Muscidae",
+       subtitle="Trend uncertainty across different time windows") +
+  theme(axis.text.x = element_text(hjust = 1),
+        plot.title = element_text(face = "bold"))
+
+dat_path="C:\\pdumandanSLU\\PatD-SLU\\SLU\\phenology-project\\ZackPhen\\data"
+arth_name=paste(dat_path, '\\arth_datA','.csv', sep = '')
+
+arth_datA=read.csv(arth_name, header=T, sep=',',  stringsAsFactors = F)
+#or: arth_datA=read.csv("https://raw.githubusercontent.com/patdumandan/ZackPhen/refs/heads/main/data/arth_datA.csv")
+
+#Sciaridae####
+sci_datA=arth_datA%>%filter(HoyeTaxon=="Sciaridae")
+
+#extract peak DOY
+sci_fit=readRDS("C:\\pdumandanSLU\\PatD-SLU\\SLU\\phenology-project\\ZackPhen\\models\\phenology_Sciaridae.rds")
+
+scidraws_doy=sci_fit$draws(variable="mu", format="df")
+
+sciyears <- sort(unique(sci_datA$Year))
+
+scipeak_df <- as_draws_df(scidraws_doy)%>%
+  mutate(.draw = row_number())%>%
+  tidyr::pivot_longer(
+    cols = starts_with("mu"),
+    names_pattern = "mu\\[(\\d+)\\]",
+    names_to = "year_index",
+    values_to = "DOY_peak_std")%>%select(year_index, DOY_peak_std, .draw)%>%
+  mutate(DOY_peak=DOY_peak_std*DOY_sd+DOY_mean,
+         year_index = as.integer(year_index),
+         year = sciyears[year_index])
+
+scisummary_peak <- scipeak_df%>%
+  group_by(year)%>%
+  summarise(
+    mean  = mean(DOY_peak),
+    median= median(DOY_peak),
+    lower= quantile(DOY_peak, 0.05),
+    upper= quantile(DOY_peak, 0.95))
+
+step_size=1
+nyr=length(unique(sci_datA$year))
+
+years_all <- sort(unique(scipeak_df$year))
+
+scip_slide_draws <- list()
+
+for (nyr in seq(5, 29, by = 1)) {
+  for (start in seq(1, length(years_all) - nyr + 1)) {
+
+    yrs <- years_all[start:(start + nyr - 1)]
+
+    scip_slide_draws[[length(scip_slide_draws) + 1]] <-
+      scipeak_df %>% filter(year %in% yrs)
+  }}
+
+sci_slopes_draws <- lapply(scip_slide_draws, fit_slopes_per_window)
+
+sciaridae_peak_slope_ci <- map2_dfr(sci_slopes_draws,scip_slide_draws, summarize_slopes)%>%
+  mutate(TSL = end_yr - start_yr + 1,
+         CI_width = slope_upr - slope_lwr,
+         year = sciyears[start_yr])
+
+scip=ggplot(sciaridae_peak_slope_ci,
+            aes(x = TSL, y = start_yr)) +
+  geom_point(aes(size = CI_width,fill = slope_mean),
+             shape = 21, color = "black",alpha = 0.7) +
+  scale_size_continuous(name = "95% CI width",range = c(1, 6)) +
+  scale_fill_gradient2(low = "blue", mid = "white", high = "red",midpoint = 0,
+                       name = "Trend (slope)") +
+  theme_classic() +
+  labs(x = "Time-series length (years)",y = "Start year",
+       title = "Sciaridae",
+       subtitle="Trend uncertainty across different time windows") +
+  theme(axis.text.x = element_text(hjust = 1),
+        plot.title = element_text(face = "bold"))
+
+dat_path="C:\\pdumandanSLU\\PatD-SLU\\SLU\\phenology-project\\ZackPhen\\data"
+arth_name=paste(dat_path, '\\arth_datA','.csv', sep = '')
+
+arth_datA=read.csv(arth_name, header=T, sep=',',  stringsAsFactors = F)
+#or: arth_datA=read.csv("https://raw.githubusercontent.com/patdumandan/ZackPhen/refs/heads/main/data/arth_datA.csv")
+
+#Lycosidae####
+lyc_datA=arth_datA%>%filter(HoyeTaxon=="Lycosidae")
+
+#extract peak DOY
+lyc_fit=readRDS("C:\\pdumandanSLU\\PatD-SLU\\SLU\\phenology-project\\ZackPhen\\models\\phenology_Lycosidae.rds")
+
+lycdraws_doy=lyc_fit$draws(variable="mu", format="df")
+
+lycyears <- sort(unique(lyc_datA$Year))
+
+lycpeak_df <- as_draws_df(lycdraws_doy)%>%
+  mutate(.draw = row_number())%>%
+  tidyr::pivot_longer(
+    cols = starts_with("mu"),
+    names_pattern = "mu\\[(\\d+)\\]",
+    names_to = "year_index",
+    values_to = "DOY_peak_std")%>%select(year_index, DOY_peak_std, .draw)%>%
+  mutate(DOY_peak=DOY_peak_std*DOY_sd+DOY_mean,
+         year_index = as.integer(year_index),
+         year = lycyears[year_index])
+
+lycsummary_peak <- lycpeak_df%>%
+  group_by(year)%>%
+  summarise(
+    mean  = mean(DOY_peak),
+    median= median(DOY_peak),
+    lower= quantile(DOY_peak, 0.05),
+    upper= quantile(DOY_peak, 0.95))
+
+step_size=1
+nyr=length(unique(lyc_datA$year))
+
+years_all <- sort(unique(lycpeak_df$year))
+
+lycp_slide_draws <- list()
+
+for (nyr in seq(5, 29, by = 1)) {
+  for (start in seq(1, length(years_all) - nyr + 1)) {
+
+    yrs <- years_all[start:(start + nyr - 1)]
+
+    lycp_slide_draws[[length(lycp_slide_draws) + 1]] <-
+      lycpeak_df %>% filter(year %in% yrs)
+  }}
+
+lyc_slopes_draws <- lapply(lycp_slide_draws, fit_slopes_per_window)
+
+lycosidae_peak_slope_ci <- map2_dfr(lyc_slopes_draws,lycp_slide_draws, summarize_slopes)%>%
+  mutate(TSL = end_yr - start_yr + 1,
+         CI_width = slope_upr - slope_lwr,
+         year = lycyears[start_yr])
+
+lycp=ggplot(lycosidae_peak_slope_ci,
+            aes(x = TSL, y = start_yr)) +
+  geom_point(aes(size = CI_width,fill = slope_mean),
+             shape = 21, color = "black",alpha = 0.7) +
+  scale_size_continuous(name = "95% CI width",range = c(1, 6)) +
+  scale_fill_gradient2(low = "blue", mid = "white", high = "red",midpoint = 0,
+                       name = "Trend (slope)") +
+  theme_classic() +
+  labs(x = "Time-series length (years)",y = "Start year",
+       title = "Lycosidae",
+       subtitle="Trend uncertainty across different time windows") +
+  theme(axis.text.x = element_text(hjust = 1),
+        plot.title = element_text(face = "bold"))
+
+dat_path="C:\\pdumandanSLU\\PatD-SLU\\SLU\\phenology-project\\ZackPhen\\data"
+arth_name=paste(dat_path, '\\arth_datA','.csv', sep = '')
+
+arth_datA=read.csv(arth_name, header=T, sep=',',  stringsAsFactors = F)
+#or: arth_datA=read.csv("https://raw.githubusercontent.com/patdumandan/ZackPhen/refs/heads/main/data/arth_datA.csv")
+
+#Phoridae####
+pho_datA=arth_datA%>%filter(HoyeTaxon=="Phoridae")
+
+#extract peak DOY
+pho_fit=readRDS("C:\\pdumandanSLU\\PatD-SLU\\SLU\\phenology-project\\ZackPhen\\models\\phenology_Phoridae.rds")
+
+phodraws_doy=pho_fit$draws(variable="mu", format="df")
+
+phoyears <- sort(unique(pho_datA$Year))
+
+phopeak_df <- as_draws_df(phodraws_doy)%>%
+  mutate(.draw = row_number())%>%
+  tidyr::pivot_longer(
+    cols = starts_with("mu"),
+    names_pattern = "mu\\[(\\d+)\\]",
+    names_to = "year_index",
+    values_to = "DOY_peak_std")%>%select(year_index, DOY_peak_std, .draw)%>%
+  mutate(DOY_peak=DOY_peak_std*DOY_sd+DOY_mean,
+         year_index = as.integer(year_index),
+         year = phoyears[year_index])
+
+phosummary_peak <- phopeak_df%>%
+  group_by(year)%>%
+  summarise(
+    mean  = mean(DOY_peak),
+    median= median(DOY_peak),
+    lower= quantile(DOY_peak, 0.05),
+    upper= quantile(DOY_peak, 0.95))
+
+step_size=1
+nyr=length(unique(pho_datA$year))
+
+years_all <- sort(unique(phopeak_df$year))
+
+phop_slide_draws <- list()
+
+for (nyr in seq(5, 21, by = 1)) {
+  for (start in seq(1, length(years_all) - nyr + 1)) {
+
+    yrs <- years_all[start:(start + nyr - 1)]
+
+    phop_slide_draws[[length(phop_slide_draws) + 1]] <-
+      phopeak_df %>% filter(year %in% yrs)
+  }}
+
+pho_slopes_draws <- lapply(phop_slide_draws, fit_slopes_per_window)
+
+phoridae_peak_slope_ci <- map2_dfr(pho_slopes_draws,phop_slide_draws, summarize_slopes)%>%
+  mutate(TSL = end_yr - start_yr + 1,
+         CI_width = slope_upr - slope_lwr,
+         year = phoyears[start_yr])
+
+phop=ggplot(phoridae_peak_slope_ci,
+            aes(x = TSL, y = start_yr)) +
+  geom_point(aes(size = CI_width,fill = slope_mean),
+             shape = 21, color = "black",alpha = 0.7) +
+  scale_size_continuous(name = "95% CI width",range = c(1, 6)) +
+  scale_fill_gradient2(low = "blue", mid = "white", high = "red",midpoint = 0,
+                       name = "Trend (slope)") +
+  theme_classic() +
+  labs(x = "Time-series length (years)",y = "Start year",
+       title = "Phoridae",
+       subtitle="Trend uncertainty across different time windows") +
+  theme(axis.text.x = element_text(hjust = 1),
+        plot.title = element_text(face = "bold"))
+
+dat_path="C:\\pdumandanSLU\\PatD-SLU\\SLU\\phenology-project\\ZackPhen\\data"
+arth_name=paste(dat_path, '\\arth_datA','.csv', sep = '')
+
+arth_datA=read.csv(arth_name, header=T, sep=',',  stringsAsFactors = F)
+#or: arth_datA=read.csv("https://raw.githubusercontent.com/patdumandan/ZackPhen/refs/heads/main/data/arth_datA.csv")
+
+#Collembola####
+col_datA=arth_datA%>%filter(HoyeTaxon=="Collembola")
+
+#extract peak DOY
+col_fit=readRDS("C:\\pdumandanSLU\\PatD-SLU\\SLU\\phenology-project\\ZackPhen\\models\\phenology_Collembola.rds")
+
+coldraws_doy=col_fit$draws(variable="mu", format="df")
+
+colyears <- sort(unique(col_datA$Year))
+
+colpeak_df <- as_draws_df(coldraws_doy)%>%
+  mutate(.draw = row_number())%>%
+  tidyr::pivot_longer(
+    cols = starts_with("mu"),
+    names_pattern = "mu\\[(\\d+)\\]",
+    names_to = "year_index",
+    values_to = "DOY_peak_std")%>%select(year_index, DOY_peak_std, .draw)%>%
+  mutate(DOY_peak=DOY_peak_std*DOY_sd+DOY_mean,
+         year_index = as.integer(year_index),
+         year = colyears[year_index])
+
+colsummary_peak <- colpeak_df%>%
+  group_by(year)%>%
+  summarise(
+    mean  = mean(DOY_peak),
+    median= median(DOY_peak),
+    lower= quantile(DOY_peak, 0.05),
+    upper= quantile(DOY_peak, 0.95))
+
+step_size=1
+nyr=length(unique(col_datA$year))
+
+years_all <- sort(unique(colpeak_df$year))
+
+colp_slide_draws <- list()
+
+for (nyr in seq(5, 29, by = 1)) {
+  for (start in seq(1, length(years_all) - nyr + 1)) {
+
+    yrs <- years_all[start:(start + nyr - 1)]
+
+    colp_slide_draws[[length(colp_slide_draws) + 1]] <-
+      colpeak_df %>% filter(year %in% yrs)
+  }}
+
+col_slopes_draws <- lapply(colp_slide_draws, fit_slopes_per_window)
+
+collembola_peak_slope_ci <- map2_dfr(col_slopes_draws,colp_slide_draws, summarize_slopes)%>%
+  mutate(TSL = end_yr - start_yr + 1,
+         CI_width = slope_upr - slope_lwr,
+         year = colyears[start_yr])
+
+colp=ggplot(collembola_peak_slope_ci,
+            aes(x = TSL, y = start_yr)) +
+  geom_point(aes(size = CI_width,fill = slope_mean),
+             shape = 21, color = "black",alpha = 0.7) +
+  scale_size_continuous(name = "95% CI width",range = c(1, 6)) +
+  scale_fill_gradient2(low = "blue", mid = "white", high = "red",midpoint = 0,
+                       name = "Trend (slope)") +
+  theme_classic() +
+  labs(x = "Time-series length (years)",y = "Start year",
+       title = "Collembola",
+       subtitle="Trend uncertainty across different time windows") +
+  theme(axis.text.x = element_text(hjust = 1),
+        plot.title = element_text(face = "bold"))
+dat_path="C:\\pdumandanSLU\\PatD-SLU\\SLU\\phenology-project\\ZackPhen\\data"
+arth_name=paste(dat_path, '\\arth_datA','.csv', sep = '')
+
+arth_datA=read.csv(arth_name, header=T, sep=',',  stringsAsFactors = F)
+#or: arth_datA=read.csv("https://raw.githubusercontent.com/patdumandan/ZackPhen/refs/heads/main/data/arth_datA.csv")
+
+#Ichneumonidae####
+ich_datA=arth_datA%>%filter(HoyeTaxon=="Ichneumonidae")
+
+#extract peak DOY
+ich_fit=readRDS("C:\\pdumandanSLU\\PatD-SLU\\SLU\\phenology-project\\ZackPhen\\models\\phenology_Ichneumonidae.rds")
+
+ichdraws_doy=ich_fit$draws(variable="mu", format="df")
+
+ichyears <- sort(unique(ich_datA$Year))
+
+ichpeak_df <- as_draws_df(ichdraws_doy)%>%
+  mutate(.draw = row_number())%>%
+  tidyr::pivot_longer(
+    cols = starts_with("mu"),
+    names_pattern = "mu\\[(\\d+)\\]",
+    names_to = "year_index",
+    values_to = "DOY_peak_std")%>%select(year_index, DOY_peak_std, .draw)%>%
+  mutate(DOY_peak=DOY_peak_std*DOY_sd+DOY_mean,
+         year_index = as.integer(year_index),
+         year = ichyears[year_index])
+
+ichsummary_peak <- ichpeak_df%>%
+  group_by(year)%>%
+  summarise(
+    mean  = mean(DOY_peak),
+    median= median(DOY_peak),
+    lower= quantile(DOY_peak, 0.05),
+    upper= quantile(DOY_peak, 0.95))
+
+step_size=1
+nyr=length(unique(ich_datA$year))
+
+years_all <- sort(unique(ichpeak_df$year))
+
+ichp_slide_draws <- list()
+
+for (nyr in seq(5, 24, by = 1)) {
+  for (start in seq(1, length(years_all) - nyr + 1)) {
+
+    yrs <- years_all[start:(start + nyr - 1)]
+
+    ichp_slide_draws[[length(ichp_slide_draws) + 1]] <-
+      ichpeak_df %>% filter(year %in% yrs)
+  }}
+
+ich_slopes_draws <- lapply(ichp_slide_draws, fit_slopes_per_window)
+
+ichneumonidae_peak_slope_ci <- map2_dfr(ich_slopes_draws,ichp_slide_draws, summarize_slopes)%>%
+  mutate(TSL = end_yr - start_yr + 1,
+         CI_width = slope_upr - slope_lwr,
+         year = ichyears[start_yr])
+
+ichp=ggplot(ichneumonidae_peak_slope_ci,
+            aes(x = TSL, y = start_yr)) +
+  geom_point(aes(size = CI_width,fill = slope_mean),
+             shape = 21, color = "black",alpha = 0.7) +
+  scale_size_continuous(name = "95% CI width",range = c(1, 6)) +
+  scale_fill_gradient2(low = "blue", mid = "white", high = "red",midpoint = 0,
+                       name = "Trend (slope)") +
+  theme_classic() +
+  labs(x = "Time-series length (years)",y = "Start year",
+       title = "Ichneumonidae",
+       subtitle="Trend uncertainty across different time windows") +
+  theme(axis.text.x = element_text(hjust = 1),
+        plot.title = element_text(face = "bold"))
+
+dat_path="C:\\pdumandanSLU\\PatD-SLU\\SLU\\phenology-project\\ZackPhen\\data"
+arth_name=paste(dat_path, '\\arth_datA','.csv', sep = '')
+
+arth_datA=read.csv(arth_name, header=T, sep=',',  stringsAsFactors = F)
+#or: arth_datA=read.csv("https://raw.githubusercontent.com/patdumandan/ZackPhen/refs/heads/main/data/arth_datA.csv")
+
+#Linyphiidae####
+lin_datA=arth_datA%>%filter(HoyeTaxon=="Linyphiidae")
+
+#extract peak DOY
+lin_fit=readRDS("C:\\pdumandanSLU\\PatD-SLU\\SLU\\phenology-project\\ZackPhen\\models\\phenology_Linyphiidae.rds")
+
+lindraws_doy=lin_fit$draws(variable="mu", format="df")
+
+linyears <- sort(unique(lin_datA$Year))
+
+linpeak_df <- as_draws_df(lindraws_doy)%>%
+  mutate(.draw = row_number())%>%
+  tidyr::pivot_longer(
+    cols = starts_with("mu"),
+    names_pattern = "mu\\[(\\d+)\\]",
+    names_to = "year_index",
+    values_to = "DOY_peak_std")%>%select(year_index, DOY_peak_std, .draw)%>%
+  mutate(DOY_peak=DOY_peak_std*DOY_sd+DOY_mean,
+         year_index = as.integer(year_index),
+         year = linyears[year_index])
+
+linsummary_peak <- linpeak_df%>%
+  group_by(year)%>%
+  summarise(
+    mean  = mean(DOY_peak),
+    median= median(DOY_peak),
+    lower= quantile(DOY_peak, 0.05),
+    upper= quantile(DOY_peak, 0.95))
+
+step_size=1
+nyr=length(unique(lin_datA$year))
+
+years_all <- sort(unique(linpeak_df$year))
+
+linp_slide_draws <- list()
+
+for (nyr in seq(5, 29, by = 1)) {
+  for (start in seq(1, length(years_all) - nyr + 1)) {
+
+    yrs <- years_all[start:(start + nyr - 1)]
+
+    linp_slide_draws[[length(linp_slide_draws) + 1]] <-
+      linpeak_df %>% filter(year %in% yrs)
+  }}
+
+lin_slopes_draws <- lapply(linp_slide_draws, fit_slopes_per_window)
+
+linyphiidae_peak_slope_ci <- map2_dfr(lin_slopes_draws,linp_slide_draws, summarize_slopes)%>%
+  mutate(TSL = end_yr - start_yr + 1,
+         CI_width = slope_upr - slope_lwr,
+         year = linyears[start_yr])
+
+linp=ggplot(linyphiidae_peak_slope_ci,
+            aes(x = TSL, y = start_yr)) +
+  geom_point(aes(size = CI_width,fill = slope_mean),
+             shape = 21, color = "black",alpha = 0.7) +
+  scale_size_continuous(name = "95% CI width",range = c(1, 6)) +
+  scale_fill_gradient2(low = "blue", mid = "white", high = "red",midpoint = 0,
+                       name = "Trend (slope)") +
+  theme_classic() +
+  labs(x = "Time-series length (years)",y = "Start year",
+       title = "Linyphiidae",
+       subtitle="Trend uncertainty across different time windows") +
+  theme(axis.text.x = element_text(hjust = 1),
+        plot.title = element_text(face = "bold"))
+dat_path="C:\\pdumandanSLU\\PatD-SLU\\SLU\\phenology-project\\ZackPhen\\data"
+arth_name=paste(dat_path, '\\arth_datA','.csv', sep = '')
+
+arth_datA=read.csv(arth_name, header=T, sep=',',  stringsAsFactors = F)
+#or: arth_datA=read.csv("https://raw.githubusercontent.com/patdumandan/ZackPhen/refs/heads/main/data/arth_datA.csv")
+
+#Coccoidea####
+coc_datA=arth_datA%>%filter(HoyeTaxon=="Coccoidea")
+
+#extract peak DOY
+coc_fit=readRDS("C:\\pdumandanSLU\\PatD-SLU\\SLU\\phenology-project\\ZackPhen\\models\\phenology_Coccoidea.rds")
+
+cocdraws_doy=coc_fit$draws(variable="mu", format="df")
+
+cocyears <- sort(unique(coc_datA$Year))
+
+cocpeak_df <- as_draws_df(cocdraws_doy)%>%
+  mutate(.draw = row_number())%>%
+  tidyr::pivot_longer(
+    cols = starts_with("mu"),
+    names_pattern = "mu\\[(\\d+)\\]",
+    names_to = "year_index",
+    values_to = "DOY_peak_std")%>%select(year_index, DOY_peak_std, .draw)%>%
+  mutate(DOY_peak=DOY_peak_std*DOY_sd+DOY_mean,
+         year_index = as.integer(year_index),
+         year = cocyears[year_index])
+
+cocsummary_peak <- cocpeak_df%>%
+  group_by(year)%>%
+  summarise(
+    mean  = mean(DOY_peak),
+    median= median(DOY_peak),
+    lower= quantile(DOY_peak, 0.05),
+    upper= quantile(DOY_peak, 0.95))
+
+step_size=1
+nyr=length(unique(coc_datA$year))
+
+years_all <- sort(unique(cocpeak_df$year))
+
+cocp_slide_draws <- list()
+
+for (nyr in seq(5, 16, by = 1)) {
+  for (start in seq(1, length(years_all) - nyr + 1)) {
+
+    yrs <- years_all[start:(start + nyr - 1)]
+
+    cocp_slide_draws[[length(cocp_slide_draws) + 1]] <-
+      cocpeak_df %>% filter(year %in% yrs)
+  }}
+
+coc_slopes_draws <- lapply(cocp_slide_draws, fit_slopes_per_window)
+
+coccoidea_peak_slope_ci <- map2_dfr(coc_slopes_draws,cocp_slide_draws, summarize_slopes)%>%
+  mutate(TSL = end_yr - start_yr + 1,
+         CI_width = slope_upr - slope_lwr,
+         year = cocyears[start_yr])
+
+cocp=ggplot(coccoidea_peak_slope_ci,
+            aes(x = TSL, y = start_yr)) +
+  geom_point(aes(size = CI_width,fill = slope_mean),
+             shape = 21, color = "black",alpha = 0.7) +
+  scale_size_continuous(name = "95% CI width",range = c(1, 6)) +
+  scale_fill_gradient2(low = "blue", mid = "white", high = "red",midpoint = 0,
+                       name = "Trend (slope)") +
+  theme_classic() +
+  labs(x = "Time-series length (years)",y = "Start year",
+       title = "Coccoidea",
+       subtitle="Trend uncertainty across different time windows") +
+  theme(axis.text.x = element_text(hjust = 1),
+        plot.title = element_text(face = "bold"))
+dat_path="C:\\pdumandanSLU\\PatD-SLU\\SLU\\phenology-project\\ZackPhen\\data"
+arth_name=paste(dat_path, '\\arth_datA','.csv', sep = '')
+
+arth_datA=read.csv(arth_name, header=T, sep=',',  stringsAsFactors = F)
+#or: arth_datA=read.csv("https://raw.githubusercontent.com/patdumandan/ZackPhen/refs/heads/main/data/arth_datA.csv")
+
+#Nymphalidae####
+nym_datA=arth_datA%>%filter(HoyeTaxon=="Nymphalidae")
+
+#extract peak DOY
+nym_fit=readRDS("C:\\pdumandanSLU\\PatD-SLU\\SLU\\phenology-project\\ZackPhen\\models\\phenology_Nymphalidae.rds")
+
+nymdraws_doy=nym_fit$draws(variable="mu", format="df")
+
+nymyears <- sort(unique(nym_datA$Year))
+
+nympeak_df <- as_draws_df(nymdraws_doy)%>%
+  mutate(.draw = row_number())%>%
+  tidyr::pivot_longer(
+    cols = starts_with("mu"),
+    names_pattern = "mu\\[(\\d+)\\]",
+    names_to = "year_index",
+    values_to = "DOY_peak_std")%>%select(year_index, DOY_peak_std, .draw)%>%
+  mutate(DOY_peak=DOY_peak_std*DOY_sd+DOY_mean,
+         year_index = as.integer(year_index),
+         year = nymyears[year_index])
+
+nymsummary_peak <- nympeak_df%>%
+  group_by(year)%>%
+  summarise(
+    mean  = mean(DOY_peak),
+    median= median(DOY_peak),
+    lower= quantile(DOY_peak, 0.05),
+    upper= quantile(DOY_peak, 0.95))
+
+step_size=1
+nyr=length(unique(nym_datA$year))
+
+years_all <- sort(unique(nympeak_df$year))
+
+nymp_slide_draws <- list()
+
+for (nyr in seq(5, 9, by = 1)) {
+  for (start in seq(1, length(years_all) - nyr + 1)) {
+
+    yrs <- years_all[start:(start + nyr - 1)]
+
+    nymp_slide_draws[[length(nymp_slide_draws) + 1]] <-
+      nympeak_df %>% filter(year %in% yrs)
+  }}
+
+nym_slopes_draws <- lapply(nymp_slide_draws, fit_slopes_per_window)
+
+nymphalidae_peak_slope_ci <- map2_dfr(nym_slopes_draws,nymp_slide_draws, summarize_slopes)%>%
+  mutate(TSL = end_yr - start_yr + 1,
+         CI_width = slope_upr - slope_lwr,
+         year = nymyears[start_yr])
+
+nymp=ggplot(nymphalidae_peak_slope_ci,
+            aes(x = TSL, y = start_yr)) +
+  geom_point(aes(size = CI_width,fill = slope_mean),
+             shape = 21, color = "black",alpha = 0.7) +
+  scale_size_continuous(name = "95% CI width",range = c(1, 6)) +
+  scale_fill_gradient2(low = "blue", mid = "white", high = "red",midpoint = 0,
+                       name = "Trend (slope)") +
+  theme_classic() +
+  labs(x = "Time-series length (years)",y = "Start year",
+       title = "Nymphalidae",
+       subtitle="Trend uncertainty across different time windows") +
+  theme(axis.text.x = element_text(hjust = 1),
+        plot.title = element_text(face = "bold"))
+dat_path="C:\\pdumandanSLU\\PatD-SLU\\SLU\\phenology-project\\ZackPhen\\data"
+arth_name=paste(dat_path, '\\arth_datA','.csv', sep = '')
+
+arth_datA=read.csv(arth_name, header=T, sep=',',  stringsAsFactors = F)
+#or: arth_datA=read.csv("https://raw.githubusercontent.com/patdumandan/ZackPhen/refs/heads/main/data/arth_datA.csv")
+
+#Chironomidae####
+chi_datA=arth_datA%>%filter(HoyeTaxon=="Chironomidae")
+
+#extract peak DOY
+chi_fit=readRDS("C:\\pdumandanSLU\\PatD-SLU\\SLU\\phenology-project\\ZackPhen\\models\\phenology_Chironomidae.rds")
+
+chidraws_doy=chi_fit$draws(variable="mu", format="df")
+
+chiyears <- sort(unique(chi_datA$Year))
+
+chipeak_df <- as_draws_df(chidraws_doy)%>%
+  mutate(.draw = row_number())%>%
+  tidyr::pivot_longer(
+    cols = starts_with("mu"),
+    names_pattern = "mu\\[(\\d+)\\]",
+    names_to = "year_index",
+    values_to = "DOY_peak_std")%>%select(year_index, DOY_peak_std, .draw)%>%
+  mutate(DOY_peak=DOY_peak_std*DOY_sd+DOY_mean,
+         year_index = as.integer(year_index),
+         year = chiyears[year_index])
+
+chisummary_peak <- chipeak_df%>%
+  group_by(year)%>%
+  summarise(
+    mean  = mean(DOY_peak),
+    median= median(DOY_peak),
+    lower= quantile(DOY_peak, 0.05),
+    upper= quantile(DOY_peak, 0.95))
+
+step_size=1
+nyr=length(unique(chi_datA$year))
+
+years_all <- sort(unique(chipeak_df$year))
+
+chip_slide_draws <- list()
+
+for (nyr in seq(5, 29, by = 1)) {
+  for (start in seq(1, length(years_all) - nyr + 1)) {
+
+    yrs <- years_all[start:(start + nyr - 1)]
+
+    chip_slide_draws[[length(chip_slide_draws) + 1]] <-
+      chipeak_df %>% filter(year %in% yrs)
+  }}
+
+chi_slopes_draws <- lapply(chip_slide_draws, fit_slopes_per_window)
+
+chironomidae_peak_slope_ci <- map2_dfr(chi_slopes_draws,chip_slide_draws, summarize_slopes)%>%
+  mutate(TSL = end_yr - start_yr + 1,
+         CI_width = slope_upr - slope_lwr,
+         year = chiyears[start_yr])
+
+chip=ggplot(chironomidae_peak_slope_ci,
+            aes(x = TSL, y = start_yr)) +
+  geom_point(aes(size = CI_width,fill = slope_mean),
+             shape = 21, color = "black",alpha = 0.7) +
+  scale_size_continuous(name = "95% CI width",range = c(1, 6)) +
+  scale_fill_gradient2(low = "blue", mid = "white", high = "red",midpoint = 0,
+                       name = "Trend (slope)") +
+  theme_classic() +
+  labs(x = "Time-series length (years)",y = "Start year",
+       title = "Chironomidae",
+       subtitle="Trend uncertainty across different time windows") +
+  theme(axis.text.x = element_text(hjust = 1),
+        plot.title = element_text(face = "bold"))
+dat_path="C:\\pdumandanSLU\\PatD-SLU\\SLU\\phenology-project\\ZackPhen\\data"
+arth_name=paste(dat_path, '\\arth_datA','.csv', sep = '')
+
+arth_datA=read.csv(arth_name, header=T, sep=',',  stringsAsFactors = F)
+#or: arth_datA=read.csv("https://raw.githubusercontent.com/patdumandan/ZackPhen/refs/heads/main/data/arth_datA.csv")
+
+#Acari####
+aca_datA=arth_datA%>%filter(HoyeTaxon=="Acari")
+
+#extract peak DOY
+aca_fit=readRDS("C:\\pdumandanSLU\\PatD-SLU\\SLU\\phenology-project\\ZackPhen\\models\\phenology_Acari.rds")
+
+acadraws_doy=aca_fit$draws(variable="mu", format="df")
+
+acayears <- sort(unique(aca_datA$Year))
+
+acapeak_df <- as_draws_df(acadraws_doy)%>%
+  mutate(.draw = row_number())%>%
+  tidyr::pivot_longer(
+    cols = starts_with("mu"),
+    names_pattern = "mu\\[(\\d+)\\]",
+    names_to = "year_index",
+    values_to = "DOY_peak_std")%>%select(year_index, DOY_peak_std, .draw)%>%
+  mutate(DOY_peak=DOY_peak_std*DOY_sd+DOY_mean,
+         year_index = as.integer(year_index),
+         year = acayears[year_index])
+
+acasummary_peak <- acapeak_df%>%
+  group_by(year)%>%
+  summarise(
+    mean  = mean(DOY_peak),
+    median= median(DOY_peak),
+    lower= quantile(DOY_peak, 0.05),
+    upper= quantile(DOY_peak, 0.95))
+
+step_size=1
+nyr=length(unique(aca_datA$year))
+
+years_all <- sort(unique(acapeak_df$year))
+
+acap_slide_draws <- list()
+
+for (nyr in seq(5, 29, by = 1)) {
+  for (start in seq(1, length(years_all) - nyr + 1)) {
+
+    yrs <- years_all[start:(start + nyr - 1)]
+
+    acap_slide_draws[[length(acap_slide_draws) + 1]] <-
+      acapeak_df %>% filter(year %in% yrs)
+  }}
+
+aca_slopes_draws <- lapply(acap_slide_draws, fit_slopes_per_window)
+
+acari_peak_slope_ci <- map2_dfr(aca_slopes_draws,acap_slide_draws, summarize_slopes)%>%
+  mutate(TSL = end_yr - start_yr + 1,
+         CI_width = slope_upr - slope_lwr,
+         year = acayears[start_yr])
+
+acap=ggplot(acari_peak_slope_ci,
+            aes(x = TSL, y = start_yr)) +
+  geom_point(aes(size = CI_width,fill = slope_mean),
+             shape = 21, color = "black",alpha = 0.7) +
+  scale_size_continuous(name = "95% CI width",range = c(1, 6)) +
+  scale_fill_gradient2(low = "blue", mid = "white", high = "red",midpoint = 0,
+                       name = "Trend (slope)") +
+  theme_classic() +
+  labs(x = "Time-series length (years)",y = "Start year",
+       title = "Acari",
+       subtitle="Trend uncertainty across different time windows") +
+  theme(axis.text.x = element_text(hjust = 1),
+        plot.title = element_text(face = "bold"))
+
+#ARTH PLOTS####
+
+ggarrange(ichp, lycp)
+ggarrange(linp, ncol=2)
+
+ggarrange(cocp, nymp)
+ggarrange(scip, musp)
+
+ggarrange(acap, phop)
+ggarrange(scip, colp)
+ggarrange(colp, ncol=2)
+
+ggarrange(chip, ncol=2)
