@@ -1212,3 +1212,95 @@ ggarrange(scip, colp)
 ggarrange(colp, ncol=2)
 
 ggarrange(chip, ncol=2)
+
+#spring AT####
+step_size=1
+nyr=length(unique(airtemp_dat_apr_jul$year))
+
+years_all <- sort(unique(airtemp_dat_apr_jul$year))
+
+springtemp_slide_draws <- list()
+
+for (nyr in seq(5, 27, by = 1)) {
+  for (start in seq(1, length(years_all) - nyr + 1)) {
+
+    yrs <- years_all[start:(start + nyr - 1)]
+
+    springtemp_slide_draws[[length(springtemp_slide_draws) + 1]] <-
+      airtemp_dat_apr_jul %>% filter(year %in% yrs)
+  }}
+
+#spring temp (Apr-May)
+spring_draws <- lapply(springtemp_slide_draws,get_slope_and_pval_per_window,
+                       covar = "spring_mean_temp")
+
+spring_draws_df=bind_rows(lapply(springtemp_slide_draws,
+                                 get_slope_and_pval_per_window,covar = "spring_mean_temp"))%>%
+  mutate(significance=if_else(pval<0.05, "S", "NS"),
+         slope_sign = if_else(slope > 0, "Positive", "Negative"),
+         fill_slope = case_when(
+           significance == "S" & slope > 0 ~ "Positive",
+           significance == "S" & slope < 0 ~ "Negative",
+           TRUE ~ NA_character_))
+
+#summer AT####
+#summer temp(June-Aug)
+summertemp_slide_draws <- list()
+
+for (nyr in seq(5, 27, by = 1)) {
+  for (start in seq(1, length(years_all) - nyr + 1)) {
+
+    yrs <- years_all[start:(start + nyr - 1)]
+
+    summertemp_slide_draws[[length(summertemp_slide_draws) + 1]] <-
+      airtemp_dat_apr_jul %>% filter(year %in% yrs)
+  }}
+
+summer_draws <- lapply(summertemp_slide_draws,get_slope_and_pval_per_window,
+                       covar = "summer_mean_temp")
+
+summer_draws_df=bind_rows(lapply(summertemp_slide_draws,
+                                 get_slope_and_pval_per_window,covar = "summer_mean_temp"))%>%
+  mutate(significance=if_else(pval<0.05, "S", "NS"),
+         slope_sign = if_else(slope > 0, "Positive", "Negative"),
+         fill_slope = case_when(
+           significance == "S" & slope > 0 ~ "Positive",
+           significance == "S" & slope < 0 ~ "Negative",
+           TRUE ~ NA_character_))
+
+
+summerp=ggplot(summer_draws_df, aes(x = n_years, y = start_year)) +
+  geom_point(aes(size = abs(slope),color = slope_sign, fill=fill_slope),
+             shape = 21,alpha = 0.8,stroke = 1) +
+  scale_color_manual(values = c("Positive" = "red", "Negative" = "blue"),
+                     name = "Slope direction") +
+  scale_fill_manual(values = c("Positive" = "red", "Negative" = "blue"),
+                    guide = "none",na.value = NA) +
+  scale_size_continuous(name = "Slope magnitude",range = c(1, 6)) +
+  theme_classic() +
+  labs(
+    x = "Time-series length (years)",
+    y = "Start year",
+    title = "Summer air temperature",
+    subtitle = "Trend uncertainty across different time windows") +
+  theme(plot.title = element_text(face = "bold"))
+
+springp=ggplot(spring_draws_df, aes(x = n_years, y = start_year)) +
+  geom_point(aes(size = abs(slope),color = slope_sign, fill=fill_slope),
+             shape = 21,alpha = 0.8,stroke = 1) +
+  scale_color_manual(values = c("Positive" = "red", "Negative" = "blue"),
+                     name = "Slope direction") +
+  scale_fill_manual(values = c("Positive" = "red", "Negative" = "blue"),
+                    guide = "none",na.value = NA) +
+  scale_size_continuous(name = "Slope magnitude",range = c(1, 6)) +
+  theme_classic() +
+  labs(
+    x = "Time-series length (years)",
+    y = "Start year",
+    title = "Spring air temperature",
+    subtitle = "Trend uncertainty across different time windows") +
+  theme(plot.title = element_text(face = "bold"))
+
+#AIR TEMP PLOTS####
+ggarrange(springp,summerp)
+

@@ -267,6 +267,20 @@ summarize_slopes <- function(slope_draws, dat) {
     slope_upr   = quantile(slope_draws$slope, 0.975))
 }
 
+get_slope_and_pval_per_window <- function(dat, covar) {
+  fit <- lm(reformulate("year", covar), data = dat)
+  sm <- summary(fit)
+
+  tibble(
+    covar = covar,
+    start_year = min(dat$year),
+    end_year   = max(dat$year),
+    n_years    = length(unique(dat$year)),
+    slope = coef(fit)[["year"]],
+    pval  = sm$coefficients["year", "Pr(>|t|)"]
+  )
+}
+
 # increasing_mod=function(slide_list) {
 #   lapply(slide_list, function(dat) {
 #     slope <-as.numeric(coef(glm(mean ~ year, data = dat))[2])
