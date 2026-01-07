@@ -1273,7 +1273,7 @@ summerp=ggplot(summer_draws_df, aes(x = n_years, y = start_year)) +
   geom_point(aes(size = abs(slope),color = slope_sign, fill=fill_slope),
              shape = 21,alpha = 0.8,stroke = 1) +
   scale_color_manual(values = c("Positive" = "red", "Negative" = "blue"),
-                     name = "Slope direction") +
+                     name = "Trend (slope)") +
   scale_fill_manual(values = c("Positive" = "red", "Negative" = "blue"),
                     guide = "none",na.value = NA) +
   scale_size_continuous(name = "Slope magnitude",range = c(1, 6)) +
@@ -1289,7 +1289,7 @@ springp=ggplot(spring_draws_df, aes(x = n_years, y = start_year)) +
   geom_point(aes(size = abs(slope),color = slope_sign, fill=fill_slope),
              shape = 21,alpha = 0.8,stroke = 1) +
   scale_color_manual(values = c("Positive" = "red", "Negative" = "blue"),
-                     name = "Slope direction") +
+                     name = "Trend (slope)") +
   scale_fill_manual(values = c("Positive" = "red", "Negative" = "blue"),
                     guide = "none",na.value = NA) +
   scale_size_continuous(name = "Slope magnitude",range = c(1, 6)) +
