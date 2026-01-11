@@ -173,6 +173,29 @@ plot_params= function(species_name, data,
 
   dev.off()
 }
+extract_beta_mu <- function(
+    species_name,
+    data,
+    model_dir = "C:\\pdumandanSLU\\PatD-SLU\\SLU\\phenology-project\\ZackPhen\\models\\"
+) {
+
+  message("Extracting beta_mu for: ", species_name)
+
+  model_file <- file.path(model_dir, paste0("phenology_", species_name, ".rds"))
+
+  if (!file.exists(model_file)) {
+    stop("Model file not found: ", model_file)
+  }
+
+  fit <- readRDS(model_file)
+
+  beta_mu_draws <- fit$draws("beta_mu", format = "df")
+
+  beta_mu_draws %>%
+    transmute(
+      species = species_name,
+      beta_mu = beta_mu)
+}
 
 plot_plant_preds <- function(species_name, data,
                        model_dir = "C:\\pdumandanSLU\\PatD-SLU\\SLU\\phenology-project\\ZackPhen\\models\\",

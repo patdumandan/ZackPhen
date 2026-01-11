@@ -450,7 +450,7 @@ mussummary_peak <- muspeak_df%>%
 step_size=1
 nyr=length(unique(mus_datA$year))
 
-years_all <- sort(unique(muspeak_df$Year))
+years_all <- sort(unique(muspeak_df$year))
 
 musp_slide_draws <- list()
 
