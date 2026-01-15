@@ -65,11 +65,18 @@ for (nyr in seq(5, 24, by = 1)) {
 
 dry_slopes_draws <- lapply(dryp_slide_draws, fit_slopes_per_window)
 
-dryas_peak_slope_ci <- map2_dfr(dry_slopes_draws,dryp_slide_draws, summarize_slopes)%>%
-  mutate(TSL = end_yr - start_yr + 1,
-         CI_width = slope_upr - slope_lwr)
+dryas_slope_draws <- map2_dfr(dry_slopes_draws,dryp_slide_draws, summarize_slopes)
 
-dryp=ggplot(dryas_peak_slope_ci,
+dryas_slope_df <- dryas_slope_draws %>%
+  group_by(start_yr, end_yr, TSL) %>%
+  summarise(
+    slope_median = median(slope),
+    slope_mean   = mean(slope),
+    slope_sd= sd(slope),
+    CI_width = quantile(slope, 0.975) - quantile(slope, 0.025),
+    .groups = "drop")
+
+dryp=ggplot(dryas_slope_df,
        aes(x = TSL, y = start_yr)) +
   geom_point(aes(size = CI_width,fill = slope_mean),
              shape = 21, color = "black",alpha = 0.7) +
@@ -194,11 +201,18 @@ for (nyr in seq(5, 29, by = 1)) {
 
 sil_slopes_draws <- lapply(silp_slide_draws, fit_slopes_per_window)
 
-silene_peak_slope_ci <- map2_dfr(sil_slopes_draws,silp_slide_draws, summarize_slopes)%>%
-  mutate(TSL = end_yr - start_yr + 1,
-         CI_width = slope_upr - slope_lwr)
+silene_slope_draws <- map2_dfr(sil_slopes_draws,silp_slide_draws, summarize_slopes)
 
-silp=ggplot(silene_peak_slope_ci,
+silene_slope_df <- silene_slope_draws %>%
+  group_by(start_yr, end_yr, TSL) %>%
+  summarise(
+    slope_median = median(slope),
+    slope_mean   = mean(slope),
+    slope_sd= sd(slope),
+    CI_width = quantile(slope, 0.975) - quantile(slope, 0.025),
+    .groups = "drop")
+
+silp=ggplot(silene_slope_df,
             aes(x = TSL, y = start_yr)) +
   geom_point(aes(size = CI_width,fill = slope_mean),
              shape = 21, color = "black",alpha = 0.7) +
@@ -389,11 +403,18 @@ for (nyr in seq(5, 21, by = 1)) {
 
 pap_slopes_draws <- lapply(papp_slide_draws, fit_slopes_per_window)
 
-papaver_peak_slope_ci <- map2_dfr(pap_slopes_draws,papp_slide_draws, summarize_slopes)%>%
-  mutate(TSL = end_yr - start_yr + 1,
-         CI_width = slope_upr - slope_lwr)
+papaver_slope_draws <- map2_dfr(pap_slopes_draws,papp_slide_draws, summarize_slopes)
 
-papp=ggplot(papaver_peak_slope_ci,
+papaver_slope_df <- papaver_slope_draws %>%
+  group_by(start_yr, end_yr, TSL) %>%
+  summarise(
+    slope_median = median(slope),
+    slope_mean   = mean(slope),
+    slope_sd= sd(slope),
+    CI_width = quantile(slope, 0.975) - quantile(slope, 0.025),
+    .groups = "drop")
+
+papp=ggplot(papaver_slope_df,
             aes(x = TSL, y = start_yr)) +
   geom_point(aes(size = CI_width,fill = slope_mean),
              shape = 21, color = "black",alpha = 0.7) +
@@ -465,13 +486,19 @@ for (nyr in seq(5, 29, by = 1)) {
 
 mus_slopes_draws <- lapply(musp_slide_draws, fit_slopes_per_window)
 
-muscidae_peak_slope_ci <- map2_dfr(mus_slopes_draws,musp_slide_draws, summarize_slopes)%>%
-  mutate(TSL = end_yr - start_yr + 1,
-         CI_width = slope_upr - slope_lwr,
-         year = musyears[start_yr])
+muscidae_slope_draws <- map2_dfr(mus_slopes_draws,musp_slide_draws, summarize_slopes)
 
-musp=ggplot(muscidae_peak_slope_ci,
-            aes(x = TSL, y = year)) +
+muscidae_slope_df <- muscidae_slope_draws %>%
+  group_by(start_yr, end_yr, TSL) %>%
+  summarise(
+    slope_median = median(slope),
+    slope_mean   = mean(slope),
+    slope_sd= sd(slope),
+    CI_width = quantile(slope, 0.975) - quantile(slope, 0.025),
+    .groups = "drop")
+
+musp=ggplot(muscidae_slope_df,
+            aes(x = TSL, y = start_yr)) +
   geom_point(aes(size = CI_width,fill = slope_mean),
              shape = 21, color = "black",alpha = 0.7) +
   scale_size_continuous(name = "95% CI width",range = c(1, 6)) +
@@ -824,12 +851,18 @@ for (nyr in seq(5, 24, by = 1)) {
 
 ich_slopes_draws <- lapply(ichp_slide_draws, fit_slopes_per_window)
 
-ichneumonidae_peak_slope_ci <- map2_dfr(ich_slopes_draws,ichp_slide_draws, summarize_slopes)%>%
-  mutate(TSL = end_yr - start_yr + 1,
-         CI_width = slope_upr - slope_lwr,
-         year = ichyears[start_yr])
+ichneumonidae_slope_draws <- map2_dfr(ich_slopes_draws,ichp_slide_draws, summarize_slopes)
 
-ichp=ggplot(ichneumonidae_peak_slope_ci,
+ichneumonidae_slope_df <- ichneumonidae_slope_draws %>%
+  group_by(start_yr, end_yr, TSL) %>%
+  summarise(
+    slope_median = median(slope),
+    slope_mean   = mean(slope),
+    slope_sd= sd(slope),
+    CI_width = quantile(slope, 0.975) - quantile(slope, 0.025),
+    .groups = "drop")
+
+ichp=ggplot(ichneumonidae_slope_df,
             aes(x = TSL, y = start_yr)) +
   geom_point(aes(size = CI_width,fill = slope_mean),
              shape = 21, color = "black",alpha = 0.7) +
@@ -1109,12 +1142,18 @@ for (nyr in seq(5, 29, by = 1)) {
 
 chi_slopes_draws <- lapply(chip_slide_draws, fit_slopes_per_window)
 
-chironomidae_peak_slope_ci <- map2_dfr(chi_slopes_draws,chip_slide_draws, summarize_slopes)%>%
-  mutate(TSL = end_yr - start_yr + 1,
-         CI_width = slope_upr - slope_lwr,
-         year = chiyears[start_yr])
+chironomidae_slope_draws<- map2_dfr(chi_slopes_draws,chip_slide_draws, summarize_slopes)
 
-chip=ggplot(chironomidae_peak_slope_ci,
+chironomidae_slope_df <- chironomidae_slope_draws %>%
+  group_by(start_yr, end_yr, TSL) %>%
+  summarise(
+    slope_median = median(slope),
+    slope_mean   = mean(slope),
+    slope_sd= sd(slope),
+    CI_width = quantile(slope, 0.975) - quantile(slope, 0.025),
+    .groups = "drop")
+
+chip=ggplot(chironomidae_slope_df,
             aes(x = TSL, y = start_yr)) +
   geom_point(aes(size = CI_width,fill = slope_mean),
              shape = 21, color = "black",alpha = 0.7) +
@@ -1348,4 +1387,3 @@ snowp=ggplot(snow_draws_df, aes(x = n_Years, y = start_Year)) +
 
 #cOVARS PLOTS####
 ggarrange(springp,summerp, snowp, ncol = 3)
-
