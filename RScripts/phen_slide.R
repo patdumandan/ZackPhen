@@ -1300,7 +1300,52 @@ springp=ggplot(spring_draws_df, aes(x = n_years, y = start_year)) +
     title = "Spring air temperature",
     subtitle = "Trend uncertainty across different time windows") +
   theme(plot.title = element_text(face = "bold"))
+#snow cover####
+step_size=1
+nyr=length(unique(snow_ave$Year))
 
-#AIR TEMP PLOTS####
-ggarrange(springp,summerp)
+years_all <- sort(unique(snow_ave$Year))
+
+snow_slide_draws <- list()
+
+for (nyr in seq(5, 29, by = 1)) {
+  for (start in seq(1, length(years_all) - nyr + 1)) {
+
+    yrs <- years_all[start:(start + nyr - 1)]
+
+    snow_slide_draws[[length(snow_slide_draws) + 1]] <-
+      snow_ave %>% filter(Year %in% yrs)
+  }}
+
+#ave. snow cover in monitoring area (June 10)
+snow_draws <- lapply(snow_slide_draws,get_slope_and_pval_per_window,
+                     covar = "Jun10_cover")
+
+snow_draws_df=bind_rows(lapply(snow_slide_draws,
+                               get_slope_and_pval_per_window,covar = "Jun10_cover"))%>%
+  mutate(significance=if_else(pval<0.05, "S", "NS"),
+         slope_sign = if_else(slope > 0, "Positive", "Negative"),
+         fill_slope = case_when(
+           significance == "S" & slope > 0 ~ "Positive",
+           significance == "S" & slope < 0 ~ "Negative",
+           TRUE ~ NA_character_))
+
+snowp=ggplot(snow_draws_df, aes(x = n_Years, y = start_Year)) +
+  geom_point(aes(size = abs(slope),color = slope_sign, fill=fill_slope),
+             shape = 21,alpha = 0.8,stroke = 1) +
+  scale_color_manual(values = c("Positive" = "red", "Negative" = "blue"),
+                     name = "Trend (slope)") +
+  scale_fill_manual(values = c("Positive" = "red", "Negative" = "blue"),
+                    guide = "none",na.value = NA) +
+  scale_size_continuous(name = "Slope magnitude",range = c(1, 6)) +
+  theme_classic() +
+  labs(
+    x = "Time-series length (years)",
+    y = "Start year",
+    title = "Spring Snow Cover",
+    subtitle = "Trend uncertainty across different time windows") +
+  theme(plot.title = element_text(face = "bold"))
+
+#cOVARS PLOTS####
+ggarrange(springp,summerp, snowp, ncol = 3)
 
