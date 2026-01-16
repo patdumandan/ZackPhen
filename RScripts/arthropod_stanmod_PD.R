@@ -46,7 +46,8 @@ arth_beta_mu_summary <- beta_mu_arth %>%
   summarise(
     mean  = mean(beta_mu),
     lwr   = quantile(beta_mu, 0.025),
-    upr   = quantile(beta_mu, 0.975))%>%
+    upr   = quantile(beta_mu, 0.975),
+    Pr_pos=sum(beta_mu>0)/length(beta_mu))%>%
   mutate(consumer = factor(species, levels = consumer_order))
 
 m3=ggplot(arth_beta_mu_summary,

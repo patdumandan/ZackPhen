@@ -84,9 +84,9 @@ dryp=ggplot(dryas_slope_df,
   scale_fill_gradient2(low = "blue", mid = "white", high = "red",midpoint = 0,
                        name = "Trend (slope)") +
   theme_classic() +
-  labs(x = "Time-series length (years)",y = "Start year",
-       title = "Dryas",
-       subtitle="Trend uncertainty across different time windows") +
+  labs(x = NULL,y =NULL,
+       title = "Dryas")+
+  #     subtitle="Trend uncertainty across different time windows") +
   theme(axis.text.x = element_text(hjust = 1),
         plot.title = element_text(face = "bold"))
 
@@ -220,9 +220,9 @@ silp=ggplot(silene_slope_df,
   scale_fill_gradient2(low = "blue", mid = "white", high = "red",midpoint = 0,
                        name = "Trend (slope)") +
   theme_classic() +
-  labs(x = "Time-series length (years)",y = "Start year",
-       title = "Silene",
-       subtitle="Trend uncertainty across different time windows") +
+  labs(x = NULL,y = NULL,
+       title = "Silene")+
+#       subtitle="Trend uncertainty across different time windows") +
   theme(axis.text.x = element_text(hjust = 1),
         plot.title = element_text(face = "bold"))
 
@@ -422,9 +422,9 @@ papp=ggplot(papaver_slope_df,
   scale_fill_gradient2(low = "blue", mid = "white", high = "red",midpoint = 0,
                        name = "Trend (slope)") +
   theme_classic() +
-  labs(x = "Time-series length (years)",y = "Start year",
-       title = "Papaver",
-       subtitle="Trend uncertainty across different time windows") +
+  labs(x = NULL,y = NULL,
+       title = "Papaver")+
+   #    subtitle="Trend uncertainty across different time windows") +
   theme(axis.text.x = element_text(hjust = 1),
         plot.title = element_text(face = "bold"))
 
@@ -505,9 +505,9 @@ musp=ggplot(muscidae_slope_df,
   scale_fill_gradient2(low = "blue", mid = "white", high = "red",midpoint = 0,
                        name = "Trend (slope)") +
   theme_classic() +
-  labs(x = "Time-series length (years)",y = "Start year",
-       title = "Muscidae",
-       subtitle="Trend uncertainty across different time windows") +
+  labs(x = NULL,y = NULL,
+       title = "Muscidae")+
+  #     subtitle="Trend uncertainty across different time windows") +
   theme(axis.text.x = element_text(hjust = 1),
         plot.title = element_text(face = "bold"))
 
@@ -870,9 +870,9 @@ ichp=ggplot(ichneumonidae_slope_df,
   scale_fill_gradient2(low = "blue", mid = "white", high = "red",midpoint = 0,
                        name = "Trend (slope)") +
   theme_classic() +
-  labs(x = "Time-series length (years)",y = "Start year",
-       title = "Ichneumonidae",
-       subtitle="Trend uncertainty across different time windows") +
+  labs(x = NULL,y = NULL,
+       title = "Ichneumonidae")+
+#       subtitle="Trend uncertainty across different time windows") +
   theme(axis.text.x = element_text(hjust = 1),
         plot.title = element_text(face = "bold"))
 
@@ -1161,16 +1161,30 @@ chip=ggplot(chironomidae_slope_df,
   scale_fill_gradient2(low = "blue", mid = "white", high = "red",midpoint = 0,
                        name = "Trend (slope)") +
   theme_classic() +
-  labs(x = "Time-series length (years)",y = "Start year",
-       title = "Chironomidae",
-       subtitle="Trend uncertainty across different time windows") +
+  labs(x = NULL,y = NULL,
+       title = "Chironomidae")+
+#       subtitle="Trend uncertainty across different time windows") +
   theme(axis.text.x = element_text(hjust = 1),
         plot.title = element_text(face = "bold"))
-dat_path="C:\\pdumandanSLU\\PatD-SLU\\SLU\\phenology-project\\ZackPhen\\data"
-arth_name=paste(dat_path, '\\arth_datA','.csv', sep = '')
 
-arth_datA=read.csv(arth_name, header=T, sep=',',  stringsAsFactors = F)
-#or: arth_datA=read.csv("https://raw.githubusercontent.com/patdumandan/ZackPhen/refs/heads/main/data/arth_datA.csv")
+#####for window categories
+chironomidae_tsl <- chironomidae_slope_draws %>%
+  group_by(start_yr, TSL) %>%
+  summarise(
+    Pr_pos = mean(slope > 0),
+    Pr_neg = mean(slope < 0),
+    .groups = "drop"
+  )%>%
+  mutate(
+    direction = case_when(
+      Pr_pos > 0.95 ~ "positive",
+      Pr_neg > 0.95 ~ "negative",
+      TRUE          ~ "weak"
+    ),
+    Pr_direction = pmax(Pr_pos, Pr_neg)
+  )%>%
+  filter(Pr_direction > 0.95)%>%
+  arrange(desc(Pr_direction))
 
 #Acari####
 aca_datA=arth_datA%>%filter(HoyeTaxon=="Acari")
@@ -1385,5 +1399,12 @@ snowp=ggplot(snow_draws_df, aes(x = n_Years, y = start_Year)) +
     subtitle = "Trend uncertainty across different time windows") +
   theme(plot.title = element_text(face = "bold"))
 
-#cOVARS PLOTS####
+#COVARS PLOTS####
 ggarrange(springp,summerp, snowp, ncol = 3)
+
+allt=ggarrange(dryp,musp, silp, ichp, papp, chip,
+                common.legend = T, ncol=2, nrow=3, legend = "right")
+
+annotate_figure(allt,
+                left = text_grob("Start year", rot = 90, size = 12),
+                bottom = text_grob("Time-series length (years)", size = 12))
