@@ -1,14 +1,14 @@
 // Combined Plant–Arthropod Phenology Model
 
 data {
-  int<lower=1> ND;                   // # days in prediction grid
+  int<lower=1> ND;                   //  days in prediction grid=121
 
-  int<lower=1> Nyr_pl;               // # plant years
-  int<lower=1> Nyr_ar;               // # arthropod years
+  int<lower=1> Nyr_pl;               //  plant years
+  int<lower=1> Nyr_ar;               //  arthropod years
 
-  int<lower=1> N_shared;
-  array[N_shared] int<lower=1,upper=Nyr_pl> pl_shared_id;
-  array[N_shared] int<lower=1,upper=Nyr_ar> ar_shared_id;
+  // int<lower=1> N_shared;
+  // array[N_shared] int<lower=1,upper=Nyr_pl> pl_shared_id;
+  // array[N_shared] int<lower=1,upper=Nyr_ar> ar_shared_id;
 
   real DOY_mean_pl;
   real DOY_sd_pl;
