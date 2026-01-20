@@ -4,19 +4,8 @@ library(tidyr)
 library(posterior)
 library(cmdstanr)
 
-#data####
-dat_path="C:\\pdumandanSLU\\PatD-SLU\\SLU\\phenology-project\\ZackPhen\\data"
-arth_name=paste(dat_path, '\\arth_datA','.csv', sep = '')
-dat_name=paste(dat_path, '\\plant_datA','.csv', sep = '')
-
-arth_datA=read.csv(arth_name, header=T, sep=',',  stringsAsFactors = F)
-plant_datA=read.csv(dat_name, header=T, sep=',',  stringsAsFactors = F)
-
-dry_datA=plant_data%>%filter(species=="Dryas")
-pho_datA=arth_datA%>%filter(HoyeTaxon=="Phoridae")
-
 #data
-dat_path="C:\\pdumandanSLU\\PatD-SLU\\SLU\\phenology-project\\ZackPhen\\data"
+dat_path="C:\\pdumandanSLU\\PatD-SLU\\SLU\\phenology-project\\ZackPhen\\data" #or also in repo: data
 dat_name=paste(dat_path, '\\plant_datA','.csv', sep = '')
 
 plant_datA=read.csv(dat_name, header=T, sep=',',  stringsAsFactors = F)
