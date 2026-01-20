@@ -2,6 +2,18 @@ library(ggplot2)
 library(dplyr)
 library(tidyr)
 library(posterior)
+library(cmdstanr)
+
+#data####
+dat_path="C:\\pdumandanSLU\\PatD-SLU\\SLU\\phenology-project\\ZackPhen\\data"
+arth_name=paste(dat_path, '\\arth_datA','.csv', sep = '')
+dat_name=paste(dat_path, '\\plant_datA','.csv', sep = '')
+
+arth_datA=read.csv(arth_name, header=T, sep=',',  stringsAsFactors = F)
+plant_datA=read.csv(dat_name, header=T, sep=',',  stringsAsFactors = F)
+
+dry_datA=plant_data%>%filter(species=="Dryas")
+pho_datA=arth_datA%>%filter(HoyeTaxon=="Phoridae")
 
 drypho=list(
 DOY_mean_pl=mean(plant_datA$DOY),
@@ -42,14 +54,14 @@ drypho$ar_shared_id = match(shared_years,
 
 
 #fit model
-combined_mod=cmdstan_model("combined_plantarth.stan")
+combined_mod=cmdstan_model("combined_plantarth.stan") #make sure source location is identified before running this.
 
 drypho_mod <- combined_mod$sample(
   data = drypho,
   seed = 123,
   chains = 4,
   parallel_chains = 4,
-  iter_sampling = 2000,
+  iter_sampling = 2000, #can be reduced to lower for testing purposes
   iter_warmup = 500)
 
 #extract posterior draws
