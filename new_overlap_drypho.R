@@ -61,11 +61,11 @@ for (draw in 1:n_draws) {
     plant_fits[draw, y, ] <- generate_fitted_curve(
       draw, y, alpha_pl, beta_DOYs_pl, beta_DOYsqs_pl,
       doy_std_pl, doy_sq_std_pl,
-      link="logit"
-    )
+      link="logit")
 
-    plant_fits[draw, y, ] <- plant_fits[draw, y, ] /
-      sum(plant_fits[draw, y, ])
+    #remove for plotting with raw data
+    # plant_fits[draw, y, ] <- plant_fits[draw, y, ] /
+    #   sum(plant_fits[draw, y, ])
   }
 
   for (y in 1:Nyr_ar) {
@@ -74,8 +74,8 @@ for (draw in 1:n_draws) {
       doy_std_ar, doy_sq_std_ar,
       link="log")
 
-    arth_fits[draw, y, ] <- arth_fits[draw, y, ] /
-      sum(arth_fits[draw, y, ])
+    # arth_fits[draw, y, ] <- arth_fits[draw, y, ] /
+    #   sum(arth_fits[draw, y, ])
   }
 }
 

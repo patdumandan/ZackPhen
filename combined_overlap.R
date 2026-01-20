@@ -3,6 +3,22 @@ library(dplyr)
 library(tidyr)
 library(posterior)
 
+#data
+dat_path="C:\\pdumandanSLU\\PatD-SLU\\SLU\\phenology-project\\ZackPhen\\data"
+dat_name=paste(dat_path, '\\plant_datA','.csv', sep = '')
+
+plant_datA=read.csv(dat_name, header=T, sep=',',  stringsAsFactors = F)
+
+file_path="C:\\pdumandanSLU\\PatD-SLU\\SLU\\phenology-project\\ZackPhen\\data"
+art_name=paste(file_path, '\\arth_datA','.csv', sep = '')
+
+arth_datA=read.csv(art_name, header=T, sep=',',  stringsAsFactors = F)
+
+dry_datA <- plant_datA%>%filter(species=="Dryas")
+pho_datA <- arth_datA %>%filter(HoyeTaxon=="Phoridae")%>%
+  mutate(plot_id = dense_rank(Plot.ID)) %>%
+  ungroup()
+
 drypho=list(
 DOY_mean_pl=mean(plant_datA$DOY),
 DOY_sd_pl=sd(plant_datA$DOY),
@@ -79,33 +95,47 @@ Nyr_pl  <- ncol(beta_DOYs_pl)
 Nyr_ar  <- ncol(beta_DOYs_ar)
 ND      <- length(150:270)
 
-generate_fitted_curve <- function(draw, yr, alpha, beta_DOYs, beta_DOYsqs, z, z2) {
+generate_fitted_curve <- function(draw, yr, alpha, beta_DOYs, beta_DOYsqs,
+                                  z, z2, link) {
+
   eta <- alpha[draw] +
-    beta_DOYs[draw, yr]   * z + #z=standardized DOY seq, z2=quad for DOY seq
+    beta_DOYs[draw, yr]   * z +
     beta_DOYsqs[draw, yr] * z2
-  plogis(eta)
+
+  if (link == "logit") {
+    p <- plogis(eta)       # probability scale
+  } else if (link == "log") {
+    p <- exp(eta)          # mean abundance
+  } else {
+    stop("Link must be 'log' or 'logit'")
+  }
+
+  return(p)
 }
 
+# --- Storage arrays ---
 plant_fits <- array(NA, c(n_draws, Nyr_pl, ND))
 arth_fits  <- array(NA, c(n_draws, Nyr_ar, ND))
 
+# --- Generate fitted curves ----
 for (draw in 1:n_draws) {
   for (y in 1:Nyr_pl) {
     plant_fits[draw, y, ] <- generate_fitted_curve(
       draw, y, alpha_pl, beta_DOYs_pl, beta_DOYsqs_pl,
-      doy_std_pl, doy_sq_std_pl)
-
-    s <- sum(plant_fits[draw, y, ]) #normalize values to get PDF
-    if (s > 0) plant_fits[draw, y, ] <- plant_fits[draw, y, ] / s
+      doy_std_pl, doy_sq_std_pl,
+      link="logit"
+    )
+   # plant_fits[draw, y, ] <- plant_fits[draw, y, ] /
+    #  sum(plant_fits[draw, y, ])
   }
 
   for (y in 1:Nyr_ar) {
     arth_fits[draw, y, ] <- generate_fitted_curve(
       draw, y, alpha_ar, beta_DOYs_ar, beta_DOYsqs_ar,
-      doy_std_ar, doy_sq_std_ar)
-
-    s <- sum(arth_fits[draw, y, ])
-    if (s > 0) arth_fits[draw, y, ] <- arth_fits[draw, y, ] / s
+      doy_std_ar, doy_sq_std_ar,
+      link="log")
+    #arth_fits[draw, y, ] <- arth_fits[draw, y, ] /
+     # sum(arth_fits[draw, y, ])
   }
 }
 
