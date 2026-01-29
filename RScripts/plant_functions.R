@@ -284,10 +284,15 @@ summarize_slopes <- function(slope_draws, dat) {
   tibble(
     start_yr = min(dat$year),
     end_yr   = max(dat$year),
-    slope_mean  = mean(slope_draws$slope),
-    slope_med   = median(slope_draws$slope),
-    slope_lwr   = quantile(slope_draws$slope, 0.025),
-    slope_upr   = quantile(slope_draws$slope, 0.975))
+    TSL = end_yr - start_yr + 1,
+   slope_draw  = slope_draws$slope)
+    # slope_med   = median(slope_draws$slope),
+    # slope_lwr   = quantile(slope_draws$slope, 0.025),
+    # slope_upr   = quantile(slope_draws$slope, 0.975))
+}
+
+extract_LT_slope=function(dat, species) {
+  dat%>%filter(dat$species== !!species)%>%pull(mean)
 }
 
 get_slope_and_pval_per_window <- function(dat, covar) {
@@ -296,7 +301,7 @@ get_slope_and_pval_per_window <- function(dat, covar) {
 
   tibble(
     covar = covar,
-    start_year = min(dat$year),
+    start_year = min(dat$year), #Year for snow
     end_year   = max(dat$year),
     n_years    = length(unique(dat$year)),
     slope = coef(fit)[["year"]],

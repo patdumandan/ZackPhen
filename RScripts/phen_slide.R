@@ -137,9 +137,9 @@ for (nyr in seq(5, 24, by = 1)) {
 
 cas_slopes_draws <- lapply(casp_slide_draws, fit_slopes_per_window)
 
-cassiope_peak_slope_ci <- map2_dfr(cas_slopes_draws,casp_slide_draws, summarize_slopes)%>%
-  mutate(TSL = end_yr - start_yr + 1,
-         CI_width = slope_upr - slope_lwr)
+cassiope_slope_draws <- map2_dfr(cas_slopes_draws,casp_slide_draws, summarize_slopes)
+ # mutate(TSL = end_yr - start_yr + 1,
+  #       CI_width = slope_upr - slope_lwr)
 
 casp=ggplot(cassiope_peak_slope_ci,
             aes(x = TSL, y = start_yr)) +
@@ -273,9 +273,7 @@ for (nyr in seq(5, 14, by = 1)) {
 
 sal_slopes_draws <- lapply(salp_slide_draws, fit_slopes_per_window)
 
-salix_peak_slope_ci <- map2_dfr(sal_slopes_draws,salp_slide_draws, summarize_slopes)%>%
-  mutate(TSL = end_yr - start_yr + 1,
-         CI_width = slope_upr - slope_lwr)
+salix_slope_draws <- map2_dfr(sal_slopes_draws,salp_slide_draws, summarize_slopes)
 
 salp=ggplot(salix_peak_slope_ci,
             aes(x = TSL, y = start_yr)) +
@@ -338,9 +336,7 @@ for (nyr in seq(5, 11, by = 1)) {
 
 sax_slopes_draws <- lapply(saxp_slide_draws, fit_slopes_per_window)
 
-saxifraga_peak_slope_ci <- map2_dfr(sax_slopes_draws,saxp_slide_draws, summarize_slopes)%>%
-  mutate(TSL = end_yr - start_yr + 1,
-         CI_width = slope_upr - slope_lwr)
+saxifraga_slope_draws <- map2_dfr(sax_slopes_draws,saxp_slide_draws, summarize_slopes)
 
 saxp=ggplot(saxifraga_peak_slope_ci,
             aes(x = TSL, y = start_yr)) +
@@ -511,12 +507,6 @@ musp=ggplot(muscidae_slope_df,
   theme(axis.text.x = element_text(hjust = 1),
         plot.title = element_text(face = "bold"))
 
-dat_path="C:\\pdumandanSLU\\PatD-SLU\\SLU\\phenology-project\\ZackPhen\\data"
-arth_name=paste(dat_path, '\\arth_datA','.csv', sep = '')
-
-arth_datA=read.csv(arth_name, header=T, sep=',',  stringsAsFactors = F)
-#or: arth_datA=read.csv("https://raw.githubusercontent.com/patdumandan/ZackPhen/refs/heads/main/data/arth_datA.csv")
-
 #Sciaridae####
 sci_datA=arth_datA%>%filter(HoyeTaxon=="Sciaridae")
 
@@ -564,10 +554,10 @@ for (nyr in seq(5, 29, by = 1)) {
 
 sci_slopes_draws <- lapply(scip_slide_draws, fit_slopes_per_window)
 
-sciaridae_peak_slope_ci <- map2_dfr(sci_slopes_draws,scip_slide_draws, summarize_slopes)%>%
-  mutate(TSL = end_yr - start_yr + 1,
-         CI_width = slope_upr - slope_lwr,
-         year = sciyears[start_yr])
+sciaridae_slope_draws <- map2_dfr(sci_slopes_draws,scip_slide_draws, summarize_slopes)
+ # mutate(TSL = end_yr - start_yr + 1,
+  #       CI_width = slope_upr - slope_lwr,
+   #      year = sciyears[start_yr])
 
 scip=ggplot(sciaridae_peak_slope_ci,
             aes(x = TSL, y = start_yr)) +
@@ -582,12 +572,6 @@ scip=ggplot(sciaridae_peak_slope_ci,
        subtitle="Trend uncertainty across different time windows") +
   theme(axis.text.x = element_text(hjust = 1),
         plot.title = element_text(face = "bold"))
-
-dat_path="C:\\pdumandanSLU\\PatD-SLU\\SLU\\phenology-project\\ZackPhen\\data"
-arth_name=paste(dat_path, '\\arth_datA','.csv', sep = '')
-
-arth_datA=read.csv(arth_name, header=T, sep=',',  stringsAsFactors = F)
-#or: arth_datA=read.csv("https://raw.githubusercontent.com/patdumandan/ZackPhen/refs/heads/main/data/arth_datA.csv")
 
 #Lycosidae####
 lyc_datA=arth_datA%>%filter(HoyeTaxon=="Lycosidae")
@@ -636,10 +620,10 @@ for (nyr in seq(5, 29, by = 1)) {
 
 lyc_slopes_draws <- lapply(lycp_slide_draws, fit_slopes_per_window)
 
-lycosidae_peak_slope_ci <- map2_dfr(lyc_slopes_draws,lycp_slide_draws, summarize_slopes)%>%
-  mutate(TSL = end_yr - start_yr + 1,
-         CI_width = slope_upr - slope_lwr,
-         year = lycyears[start_yr])
+lycosidae_slope_draws<- map2_dfr(lyc_slopes_draws,lycp_slide_draws, summarize_slopes)
+  # mutate(TSL = end_yr - start_yr + 1,
+  #        CI_width = slope_upr - slope_lwr,
+  #        year = lycyears[start_yr])
 
 lycp=ggplot(lycosidae_peak_slope_ci,
             aes(x = TSL, y = start_yr)) +
@@ -654,12 +638,6 @@ lycp=ggplot(lycosidae_peak_slope_ci,
        subtitle="Trend uncertainty across different time windows") +
   theme(axis.text.x = element_text(hjust = 1),
         plot.title = element_text(face = "bold"))
-
-dat_path="C:\\pdumandanSLU\\PatD-SLU\\SLU\\phenology-project\\ZackPhen\\data"
-arth_name=paste(dat_path, '\\arth_datA','.csv', sep = '')
-
-arth_datA=read.csv(arth_name, header=T, sep=',',  stringsAsFactors = F)
-#or: arth_datA=read.csv("https://raw.githubusercontent.com/patdumandan/ZackPhen/refs/heads/main/data/arth_datA.csv")
 
 #Phoridae####
 pho_datA=arth_datA%>%filter(HoyeTaxon=="Phoridae")
@@ -708,10 +686,10 @@ for (nyr in seq(5, 21, by = 1)) {
 
 pho_slopes_draws <- lapply(phop_slide_draws, fit_slopes_per_window)
 
-phoridae_peak_slope_ci <- map2_dfr(pho_slopes_draws,phop_slide_draws, summarize_slopes)%>%
-  mutate(TSL = end_yr - start_yr + 1,
-         CI_width = slope_upr - slope_lwr,
-         year = phoyears[start_yr])
+phoridae_slope_draws <- map2_dfr(pho_slopes_draws,phop_slide_draws, summarize_slopes)
+  # mutate(TSL = end_yr - start_yr + 1,
+  #        CI_width = slope_upr - slope_lwr,
+  #        year = phoyears[start_yr])
 
 phop=ggplot(phoridae_peak_slope_ci,
             aes(x = TSL, y = start_yr)) +
@@ -726,12 +704,6 @@ phop=ggplot(phoridae_peak_slope_ci,
        subtitle="Trend uncertainty across different time windows") +
   theme(axis.text.x = element_text(hjust = 1),
         plot.title = element_text(face = "bold"))
-
-dat_path="C:\\pdumandanSLU\\PatD-SLU\\SLU\\phenology-project\\ZackPhen\\data"
-arth_name=paste(dat_path, '\\arth_datA','.csv', sep = '')
-
-arth_datA=read.csv(arth_name, header=T, sep=',',  stringsAsFactors = F)
-#or: arth_datA=read.csv("https://raw.githubusercontent.com/patdumandan/ZackPhen/refs/heads/main/data/arth_datA.csv")
 
 #Collembola####
 col_datA=arth_datA%>%filter(HoyeTaxon=="Collembola")
@@ -780,10 +752,10 @@ for (nyr in seq(5, 29, by = 1)) {
 
 col_slopes_draws <- lapply(colp_slide_draws, fit_slopes_per_window)
 
-collembola_peak_slope_ci <- map2_dfr(col_slopes_draws,colp_slide_draws, summarize_slopes)%>%
-  mutate(TSL = end_yr - start_yr + 1,
-         CI_width = slope_upr - slope_lwr,
-         year = colyears[start_yr])
+collembola_slope_draws <- map2_dfr(col_slopes_draws,colp_slide_draws, summarize_slopes)
+  # mutate(TSL = end_yr - start_yr + 1,
+  #        CI_width = slope_upr - slope_lwr,
+  #        year = colyears[start_yr])
 
 colp=ggplot(collembola_peak_slope_ci,
             aes(x = TSL, y = start_yr)) +
@@ -798,11 +770,6 @@ colp=ggplot(collembola_peak_slope_ci,
        subtitle="Trend uncertainty across different time windows") +
   theme(axis.text.x = element_text(hjust = 1),
         plot.title = element_text(face = "bold"))
-dat_path="C:\\pdumandanSLU\\PatD-SLU\\SLU\\phenology-project\\ZackPhen\\data"
-arth_name=paste(dat_path, '\\arth_datA','.csv', sep = '')
-
-arth_datA=read.csv(arth_name, header=T, sep=',',  stringsAsFactors = F)
-#or: arth_datA=read.csv("https://raw.githubusercontent.com/patdumandan/ZackPhen/refs/heads/main/data/arth_datA.csv")
 
 #Ichneumonidae####
 ich_datA=arth_datA%>%filter(HoyeTaxon=="Ichneumonidae")
@@ -876,12 +843,6 @@ ichp=ggplot(ichneumonidae_slope_df,
   theme(axis.text.x = element_text(hjust = 1),
         plot.title = element_text(face = "bold"))
 
-dat_path="C:\\pdumandanSLU\\PatD-SLU\\SLU\\phenology-project\\ZackPhen\\data"
-arth_name=paste(dat_path, '\\arth_datA','.csv', sep = '')
-
-arth_datA=read.csv(arth_name, header=T, sep=',',  stringsAsFactors = F)
-#or: arth_datA=read.csv("https://raw.githubusercontent.com/patdumandan/ZackPhen/refs/heads/main/data/arth_datA.csv")
-
 #Linyphiidae####
 lin_datA=arth_datA%>%filter(HoyeTaxon=="Linyphiidae")
 
@@ -929,10 +890,10 @@ for (nyr in seq(5, 29, by = 1)) {
 
 lin_slopes_draws <- lapply(linp_slide_draws, fit_slopes_per_window)
 
-linyphiidae_peak_slope_ci <- map2_dfr(lin_slopes_draws,linp_slide_draws, summarize_slopes)%>%
-  mutate(TSL = end_yr - start_yr + 1,
-         CI_width = slope_upr - slope_lwr,
-         year = linyears[start_yr])
+linyphiidae_slope_draws <- map2_dfr(lin_slopes_draws,linp_slide_draws, summarize_slopes)
+  # mutate(TSL = end_yr - start_yr + 1,
+  #        CI_width = slope_upr - slope_lwr,
+  #        year = linyears[start_yr])
 
 linp=ggplot(linyphiidae_peak_slope_ci,
             aes(x = TSL, y = start_yr)) +
@@ -947,11 +908,6 @@ linp=ggplot(linyphiidae_peak_slope_ci,
        subtitle="Trend uncertainty across different time windows") +
   theme(axis.text.x = element_text(hjust = 1),
         plot.title = element_text(face = "bold"))
-dat_path="C:\\pdumandanSLU\\PatD-SLU\\SLU\\phenology-project\\ZackPhen\\data"
-arth_name=paste(dat_path, '\\arth_datA','.csv', sep = '')
-
-arth_datA=read.csv(arth_name, header=T, sep=',',  stringsAsFactors = F)
-#or: arth_datA=read.csv("https://raw.githubusercontent.com/patdumandan/ZackPhen/refs/heads/main/data/arth_datA.csv")
 
 #Coccoidea####
 coc_datA=arth_datA%>%filter(HoyeTaxon=="Coccoidea")
@@ -1000,10 +956,10 @@ for (nyr in seq(5, 16, by = 1)) {
 
 coc_slopes_draws <- lapply(cocp_slide_draws, fit_slopes_per_window)
 
-coccoidea_peak_slope_ci <- map2_dfr(coc_slopes_draws,cocp_slide_draws, summarize_slopes)%>%
-  mutate(TSL = end_yr - start_yr + 1,
-         CI_width = slope_upr - slope_lwr,
-         year = cocyears[start_yr])
+coccoidea_slope_draws <- map2_dfr(coc_slopes_draws,cocp_slide_draws, summarize_slopes)
+  # mutate(TSL = end_yr - start_yr + 1,
+  #        CI_width = slope_upr - slope_lwr,
+  #        year = cocyears[start_yr])
 
 cocp=ggplot(coccoidea_peak_slope_ci,
             aes(x = TSL, y = start_yr)) +
@@ -1018,11 +974,6 @@ cocp=ggplot(coccoidea_peak_slope_ci,
        subtitle="Trend uncertainty across different time windows") +
   theme(axis.text.x = element_text(hjust = 1),
         plot.title = element_text(face = "bold"))
-dat_path="C:\\pdumandanSLU\\PatD-SLU\\SLU\\phenology-project\\ZackPhen\\data"
-arth_name=paste(dat_path, '\\arth_datA','.csv', sep = '')
-
-arth_datA=read.csv(arth_name, header=T, sep=',',  stringsAsFactors = F)
-#or: arth_datA=read.csv("https://raw.githubusercontent.com/patdumandan/ZackPhen/refs/heads/main/data/arth_datA.csv")
 
 #Nymphalidae####
 nym_datA=arth_datA%>%filter(HoyeTaxon=="Nymphalidae")
@@ -1071,10 +1022,10 @@ for (nyr in seq(5, 9, by = 1)) {
 
 nym_slopes_draws <- lapply(nymp_slide_draws, fit_slopes_per_window)
 
-nymphalidae_peak_slope_ci <- map2_dfr(nym_slopes_draws,nymp_slide_draws, summarize_slopes)%>%
-  mutate(TSL = end_yr - start_yr + 1,
-         CI_width = slope_upr - slope_lwr,
-         year = nymyears[start_yr])
+nymphalidae_slope_draws<- map2_dfr(nym_slopes_draws,nymp_slide_draws, summarize_slopes)
+  # mutate(TSL = end_yr - start_yr + 1,
+  #        CI_width = slope_upr - slope_lwr,
+  #        year = nymyears[start_yr])
 
 nymp=ggplot(nymphalidae_peak_slope_ci,
             aes(x = TSL, y = start_yr)) +
@@ -1089,11 +1040,6 @@ nymp=ggplot(nymphalidae_peak_slope_ci,
        subtitle="Trend uncertainty across different time windows") +
   theme(axis.text.x = element_text(hjust = 1),
         plot.title = element_text(face = "bold"))
-dat_path="C:\\pdumandanSLU\\PatD-SLU\\SLU\\phenology-project\\ZackPhen\\data"
-arth_name=paste(dat_path, '\\arth_datA','.csv', sep = '')
-
-arth_datA=read.csv(arth_name, header=T, sep=',',  stringsAsFactors = F)
-#or: arth_datA=read.csv("https://raw.githubusercontent.com/patdumandan/ZackPhen/refs/heads/main/data/arth_datA.csv")
 
 #Chironomidae####
 chi_datA=arth_datA%>%filter(HoyeTaxon=="Chironomidae")
@@ -1233,10 +1179,10 @@ for (nyr in seq(5, 29, by = 1)) {
 
 aca_slopes_draws <- lapply(acap_slide_draws, fit_slopes_per_window)
 
-acari_peak_slope_ci <- map2_dfr(aca_slopes_draws,acap_slide_draws, summarize_slopes)%>%
-  mutate(TSL = end_yr - start_yr + 1,
-         CI_width = slope_upr - slope_lwr,
-         year = acayears[start_yr])
+acari_slope_draws <- map2_dfr(aca_slopes_draws,acap_slide_draws, summarize_slopes)
+  # mutate(TSL = end_yr - start_yr + 1,
+  #        CI_width = slope_upr - slope_lwr,
+  #        year = acayears[start_yr])
 
 acap=ggplot(acari_peak_slope_ci,
             aes(x = TSL, y = start_yr)) +
