@@ -70,17 +70,17 @@ dryas_slope_draws <- map2_dfr(dry_slopes_draws,dryp_slide_draws, summarize_slope
 dryas_slope_df <- dryas_slope_draws %>%
   group_by(start_yr, end_yr, TSL) %>%
   summarise(
-    slope_median = median(slope),
-    slope_mean   = mean(slope),
-    slope_sd= sd(slope),
-    CI_width = quantile(slope, 0.975) - quantile(slope, 0.025),
+    slope_median = median(slope_draw),
+    slope_mean   = mean(slope_draw),
+    slope_sd= sd(slope_draw),
+    CI_width = quantile(slope_draw, 0.975) - quantile(slope_draw, 0.025),
     .groups = "drop")
 
 dryp=ggplot(dryas_slope_df,
        aes(x = TSL, y = start_yr)) +
-  geom_point(aes(size = CI_width,fill = slope_mean),
+  geom_point(aes(size = 1/CI_width,fill = slope_mean),
              shape = 21, color = "black",alpha = 0.7) +
-  scale_size_continuous(name = "95% CI width",range = c(1, 6)) +
+  scale_size_continuous(name = "Trend certainty\n(1 / CI width)",range = c(1, 6)) +
   scale_fill_gradient2(low = "blue", mid = "white", high = "red",midpoint = 0,
                        name = "Trend (slope)") +
   theme_classic() +
@@ -141,17 +141,26 @@ cassiope_slope_draws <- map2_dfr(cas_slopes_draws,casp_slide_draws, summarize_sl
  # mutate(TSL = end_yr - start_yr + 1,
   #       CI_width = slope_upr - slope_lwr)
 
-casp=ggplot(cassiope_peak_slope_ci,
+cassiope_slope_df <- cassiope_slope_draws %>%
+  group_by(start_yr, end_yr, TSL) %>%
+  summarise(
+    slope_median = median(slope_draw),
+    slope_mean   = mean(slope_draw),
+    slope_sd= sd(slope_draw),
+    CI_width = quantile(slope_draw, 0.975) - quantile(slope_draw, 0.025),
+    .groups = "drop")
+
+casp=ggplot(cassiope_slope_df,
             aes(x = TSL, y = start_yr)) +
-  geom_point(aes(size = CI_width,fill = slope_mean),
+  geom_point(aes(size = 1/CI_width,fill = slope_mean),
              shape = 21, color = "black",alpha = 0.7) +
-  scale_size_continuous(name = "95% CI width",range = c(1, 6)) +
+  scale_size_continuous(name = "Trend certainty\n(1 / CI width)",range = c(1, 6)) +
   scale_fill_gradient2(low = "blue", mid = "white", high = "red",midpoint = 0,
                        name = "Trend (slope)") +
   theme_classic() +
-  labs(x = "Time-series length (years)",y = "Start year",
-       title = "Cassiope",
-       subtitle="Trend uncertainty across different time windows") +
+  labs(x = NULL,y =NULL,
+       title = "Cassiope")+
+   #    subtitle="Trend uncertainty across different time windows") +
   theme(axis.text.x = element_text(hjust = 1),
         plot.title = element_text(face = "bold"))
 #Silene####
@@ -206,17 +215,17 @@ silene_slope_draws <- map2_dfr(sil_slopes_draws,silp_slide_draws, summarize_slop
 silene_slope_df <- silene_slope_draws %>%
   group_by(start_yr, end_yr, TSL) %>%
   summarise(
-    slope_median = median(slope),
-    slope_mean   = mean(slope),
-    slope_sd= sd(slope),
-    CI_width = quantile(slope, 0.975) - quantile(slope, 0.025),
+    slope_median = median(slope_draw),
+    slope_mean   = mean(slope_draw),
+    slope_sd= sd(slope_draw),
+    CI_width = quantile(slope_draw, 0.975) - quantile(slope_draw, 0.025),
     .groups = "drop")
 
 silp=ggplot(silene_slope_df,
             aes(x = TSL, y = start_yr)) +
-  geom_point(aes(size = CI_width,fill = slope_mean),
+  geom_point(aes(size = 1/CI_width,fill = slope_mean),
              shape = 21, color = "black",alpha = 0.7) +
-  scale_size_continuous(name = "95% CI width",range = c(1, 6)) +
+  scale_size_continuous(name = "Trend certainty\n(1 / CI width)",range = c(1, 6)) +
   scale_fill_gradient2(low = "blue", mid = "white", high = "red",midpoint = 0,
                        name = "Trend (slope)") +
   theme_classic() +
@@ -275,17 +284,26 @@ sal_slopes_draws <- lapply(salp_slide_draws, fit_slopes_per_window)
 
 salix_slope_draws <- map2_dfr(sal_slopes_draws,salp_slide_draws, summarize_slopes)
 
-salp=ggplot(salix_peak_slope_ci,
+salix_slope_df <- salix_slope_draws %>%
+  group_by(start_yr, end_yr, TSL) %>%
+  summarise(
+    slope_median = median(slope_draw),
+    slope_mean   = mean(slope_draw),
+    slope_sd= sd(slope_draw),
+    CI_width = quantile(slope_draw, 0.975) - quantile(slope_draw, 0.025),
+    .groups = "drop")
+
+salp=ggplot(salix_slope_df,
             aes(x = TSL, y = start_yr)) +
   geom_point(aes(size = CI_width,fill = slope_mean),
              shape = 21, color = "black",alpha = 0.7) +
-  scale_size_continuous(name = "95% CI width",range = c(1, 6)) +
+  scale_size_continuous(name = "Trend certainty \n (1/CI width)",range = c(1, 6)) +
   scale_fill_gradient2(low = "blue", mid = "white", high = "red",midpoint = 0,
                        name = "Trend (slope)") +
   theme_classic() +
-  labs(x = "Time-series length (years)",y = "Start year",
-       title = "Salix",
-       subtitle="Trend uncertainty across different time windows") +
+  labs(x = NULL,y = NULL,
+       title = "Salix")+
+ #      subtitle="Trend uncertainty across different time windows") +
   theme(axis.text.x = element_text(hjust = 1),
         plot.title = element_text(face = "bold"))
 
@@ -338,17 +356,26 @@ sax_slopes_draws <- lapply(saxp_slide_draws, fit_slopes_per_window)
 
 saxifraga_slope_draws <- map2_dfr(sax_slopes_draws,saxp_slide_draws, summarize_slopes)
 
-saxp=ggplot(saxifraga_peak_slope_ci,
+saxifraga_slope_df <- saxifraga_slope_draws %>%
+  group_by(start_yr, end_yr, TSL) %>%
+  summarise(
+    slope_median = median(slope_draw),
+    slope_mean   = mean(slope_draw),
+    slope_sd= sd(slope_draw),
+    CI_width = quantile(slope_draw, 0.975) - quantile(slope_draw, 0.025),
+    .groups = "drop")
+
+saxp=ggplot(saxifraga_slope_df,
             aes(x = TSL, y = start_yr)) +
   geom_point(aes(size = CI_width,fill = slope_mean),
              shape = 21, color = "black",alpha = 0.7) +
-  scale_size_continuous(name = "95% CI width",range = c(1, 6)) +
+  scale_size_continuous(name = "Trend certainty \n(1/CI width)",range = c(1, 6)) +
   scale_fill_gradient2(low = "blue", mid = "white", high = "red",midpoint = 0,
                        name = "Trend (slope)") +
   theme_classic() +
-  labs(x = "Time-series length (years)",y = "Start year",
-       title = "Saxifraga",
-       subtitle="Trend uncertainty across different time windows") +
+  labs(x = NULL,y = NULL,
+       title = "Saxifraga")+
+     #  subtitle="Trend uncertainty across different time windows") +
   theme(axis.text.x = element_text(hjust = 1),
         plot.title = element_text(face = "bold"))
 
@@ -404,17 +431,17 @@ papaver_slope_draws <- map2_dfr(pap_slopes_draws,papp_slide_draws, summarize_slo
 papaver_slope_df <- papaver_slope_draws %>%
   group_by(start_yr, end_yr, TSL) %>%
   summarise(
-    slope_median = median(slope),
-    slope_mean   = mean(slope),
-    slope_sd= sd(slope),
-    CI_width = quantile(slope, 0.975) - quantile(slope, 0.025),
+    slope_median = median(slope_draw),
+    slope_mean   = mean(slope_draw),
+    slope_sd= sd(slope_draw),
+    CI_width = quantile(slope_draw, 0.975) - quantile(slope_draw, 0.025),
     .groups = "drop")
 
 papp=ggplot(papaver_slope_df,
             aes(x = TSL, y = start_yr)) +
-  geom_point(aes(size = CI_width,fill = slope_mean),
+  geom_point(aes(size = 1/CI_width,fill = slope_mean),
              shape = 21, color = "black",alpha = 0.7) +
-  scale_size_continuous(name = "95% CI width",range = c(1, 6)) +
+  scale_size_continuous(name = "Trend certainty \n(1/CI width)",range = c(1, 6)) +
   scale_fill_gradient2(low = "blue", mid = "white", high = "red",midpoint = 0,
                        name = "Trend (slope)") +
   theme_classic() +
@@ -487,17 +514,17 @@ muscidae_slope_draws <- map2_dfr(mus_slopes_draws,musp_slide_draws, summarize_sl
 muscidae_slope_df <- muscidae_slope_draws %>%
   group_by(start_yr, end_yr, TSL) %>%
   summarise(
-    slope_median = median(slope),
-    slope_mean   = mean(slope),
-    slope_sd= sd(slope),
-    CI_width = quantile(slope, 0.975) - quantile(slope, 0.025),
+    slope_median = median(slope_draw),
+    slope_mean   = mean(slope_draw),
+    slope_sd= sd(slope_draw),
+    CI_width = quantile(slope_draw, 0.975) - quantile(slope_draw, 0.025),
     .groups = "drop")
 
 musp=ggplot(muscidae_slope_df,
             aes(x = TSL, y = start_yr)) +
-  geom_point(aes(size = CI_width,fill = slope_mean),
+  geom_point(aes(size = 1/CI_width,fill = slope_mean),
              shape = 21, color = "black",alpha = 0.7) +
-  scale_size_continuous(name = "95% CI width",range = c(1, 6)) +
+  scale_size_continuous(name = "Trend certainty \n(1/CI width)",range = c(1, 6)) +
   scale_fill_gradient2(low = "blue", mid = "white", high = "red",midpoint = 0,
                        name = "Trend (slope)") +
   theme_classic() +
@@ -559,15 +586,24 @@ sciaridae_slope_draws <- map2_dfr(sci_slopes_draws,scip_slide_draws, summarize_s
   #       CI_width = slope_upr - slope_lwr,
    #      year = sciyears[start_yr])
 
-scip=ggplot(sciaridae_peak_slope_ci,
+sciaridae_slope_df <- sciaridae_slope_draws %>%
+  group_by(start_yr, end_yr, TSL) %>%
+  summarise(
+    slope_median = median(slope_draw),
+    slope_mean   = mean(slope_draw),
+    slope_sd= sd(slope_draw),
+    CI_width = quantile(slope_draw, 0.975) - quantile(slope_draw, 0.025),
+    .groups = "drop")
+
+scip=ggplot(sciaridae_slope_df,
             aes(x = TSL, y = start_yr)) +
-  geom_point(aes(size = CI_width,fill = slope_mean),
+  geom_point(aes(size = 1/CI_width,fill = slope_mean),
              shape = 21, color = "black",alpha = 0.7) +
-  scale_size_continuous(name = "95% CI width",range = c(1, 6)) +
+  scale_size_continuous(name = "Trend certainty \n (1/CI width)",range = c(1, 6)) +
   scale_fill_gradient2(low = "blue", mid = "white", high = "red",midpoint = 0,
                        name = "Trend (slope)") +
   theme_classic() +
-  labs(x = "Time-series length (years)",y = "Start year",
+  labs(x = NULL,y = NULL,
        title = "Sciaridae",
        subtitle="Trend uncertainty across different time windows") +
   theme(axis.text.x = element_text(hjust = 1),
@@ -621,19 +657,25 @@ for (nyr in seq(5, 29, by = 1)) {
 lyc_slopes_draws <- lapply(lycp_slide_draws, fit_slopes_per_window)
 
 lycosidae_slope_draws<- map2_dfr(lyc_slopes_draws,lycp_slide_draws, summarize_slopes)
-  # mutate(TSL = end_yr - start_yr + 1,
-  #        CI_width = slope_upr - slope_lwr,
-  #        year = lycyears[start_yr])
 
-lycp=ggplot(lycosidae_peak_slope_ci,
+lycosidae_slope_df <- lycosidae_slope_draws %>%
+  group_by(start_yr, end_yr, TSL) %>%
+  summarise(
+    slope_lwr = quantile(slope_draw, 0.025),
+    slope_upr = quantile(slope_draw, 0.975),
+    CI_width  = quantile(slope_draw, 0.975) - quantile(slope_draw, 0.025),
+    slope_mean = mean(slope_draw),
+    .groups = "drop")
+
+lycp=ggplot(lycosidae_slope_df,
             aes(x = TSL, y = start_yr)) +
-  geom_point(aes(size = CI_width,fill = slope_mean),
+  geom_point(aes(size = 1/CI_width,fill = slope_mean),
              shape = 21, color = "black",alpha = 0.7) +
-  scale_size_continuous(name = "95% CI width",range = c(1, 6)) +
+  scale_size_continuous(name = "Trend certainty \n (1/CI width)",range = c(1, 6)) +
   scale_fill_gradient2(low = "blue", mid = "white", high = "red",midpoint = 0,
                        name = "Trend (slope)") +
   theme_classic() +
-  labs(x = "Time-series length (years)",y = "Start year",
+  labs(x = NULL,y = NULL,
        title = "Lycosidae",
        subtitle="Trend uncertainty across different time windows") +
   theme(axis.text.x = element_text(hjust = 1),
@@ -691,15 +733,24 @@ phoridae_slope_draws <- map2_dfr(pho_slopes_draws,phop_slide_draws, summarize_sl
   #        CI_width = slope_upr - slope_lwr,
   #        year = phoyears[start_yr])
 
-phop=ggplot(phoridae_peak_slope_ci,
+phoridae_slope_df <- phoridae_slope_draws %>%
+  group_by(start_yr, end_yr, TSL) %>%
+  summarise(
+    slope_lwr = quantile(slope_draw, 0.025),
+    slope_upr = quantile(slope_draw, 0.975),
+    CI_width  = quantile(slope_draw, 0.975) - quantile(slope_draw, 0.025),
+    slope_mean = mean(slope_draw),
+    .groups = "drop")
+
+phop=ggplot(phoridae_slope_df,
             aes(x = TSL, y = start_yr)) +
-  geom_point(aes(size = CI_width,fill = slope_mean),
+  geom_point(aes(size = 1/CI_width,fill = slope_mean),
              shape = 21, color = "black",alpha = 0.7) +
-  scale_size_continuous(name = "95% CI width",range = c(1, 6)) +
+  scale_size_continuous(name = "Trend certainty \n(1/CI width)",range = c(1, 6)) +
   scale_fill_gradient2(low = "blue", mid = "white", high = "red",midpoint = 0,
                        name = "Trend (slope)") +
   theme_classic() +
-  labs(x = "Time-series length (years)",y = "Start year",
+  labs(x = NULL,y = NULL,
        title = "Phoridae",
        subtitle="Trend uncertainty across different time windows") +
   theme(axis.text.x = element_text(hjust = 1),
@@ -757,15 +808,24 @@ collembola_slope_draws <- map2_dfr(col_slopes_draws,colp_slide_draws, summarize_
   #        CI_width = slope_upr - slope_lwr,
   #        year = colyears[start_yr])
 
-colp=ggplot(collembola_peak_slope_ci,
+collembola_slope_df <- collembola_slope_draws %>%
+  group_by(start_yr, end_yr, TSL) %>%
+  summarise(
+    slope_lwr = quantile(slope_draw, 0.025),
+    slope_upr = quantile(slope_draw, 0.975),
+    CI_width  = quantile(slope_draw, 0.975) - quantile(slope_draw, 0.025),
+    slope_mean = mean(slope_draw),
+    .groups = "drop")
+
+colp=ggplot(collembola_slope_df,
             aes(x = TSL, y = start_yr)) +
-  geom_point(aes(size = CI_width,fill = slope_mean),
+  geom_point(aes(size = 1/CI_width,fill = slope_mean),
              shape = 21, color = "black",alpha = 0.7) +
-  scale_size_continuous(name = "95% CI width",range = c(1, 6)) +
+  scale_size_continuous(name = "Trend certainty \n (1/CI width)",range = c(1, 6)) +
   scale_fill_gradient2(low = "blue", mid = "white", high = "red",midpoint = 0,
                        name = "Trend (slope)") +
   theme_classic() +
-  labs(x = "Time-series length (years)",y = "Start year",
+  labs(x = NULL,y = NULL,
        title = "Collembola",
        subtitle="Trend uncertainty across different time windows") +
   theme(axis.text.x = element_text(hjust = 1),
@@ -823,17 +883,17 @@ ichneumonidae_slope_draws <- map2_dfr(ich_slopes_draws,ichp_slide_draws, summari
 ichneumonidae_slope_df <- ichneumonidae_slope_draws %>%
   group_by(start_yr, end_yr, TSL) %>%
   summarise(
-    slope_median = median(slope),
-    slope_mean   = mean(slope),
-    slope_sd= sd(slope),
-    CI_width = quantile(slope, 0.975) - quantile(slope, 0.025),
+    slope_median = median(slope_draw),
+    slope_mean   = mean(slope_draw),
+    slope_sd= sd(slope_draw),
+    CI_width = quantile(slope_draw, 0.975) - quantile(slope_draw, 0.025),
     .groups = "drop")
 
 ichp=ggplot(ichneumonidae_slope_df,
             aes(x = TSL, y = start_yr)) +
-  geom_point(aes(size = CI_width,fill = slope_mean),
+  geom_point(aes(size = 1/CI_width,fill = slope_mean),
              shape = 21, color = "black",alpha = 0.7) +
-  scale_size_continuous(name = "95% CI width",range = c(1, 6)) +
+  scale_size_continuous(name = "Trend certainty \n (1/CI width)",range = c(1, 6)) +
   scale_fill_gradient2(low = "blue", mid = "white", high = "red",midpoint = 0,
                        name = "Trend (slope)") +
   theme_classic() +
@@ -895,15 +955,24 @@ linyphiidae_slope_draws <- map2_dfr(lin_slopes_draws,linp_slide_draws, summarize
   #        CI_width = slope_upr - slope_lwr,
   #        year = linyears[start_yr])
 
-linp=ggplot(linyphiidae_peak_slope_ci,
+linyphiidae_slope_df <- linyphiidae_slope_draws %>%
+  group_by(start_yr, end_yr, TSL) %>%
+  summarise(
+    slope_lwr = quantile(slope_draw, 0.025),
+    slope_upr = quantile(slope_draw, 0.975),
+    CI_width  = quantile(slope_draw, 0.975) - quantile(slope_draw, 0.025),
+    slope_mean = mean(slope_draw),
+    .groups = "drop")
+
+linp=ggplot(linyphiidae_slope_df,
             aes(x = TSL, y = start_yr)) +
-  geom_point(aes(size = CI_width,fill = slope_mean),
+  geom_point(aes(size = 1/CI_width,fill = slope_mean),
              shape = 21, color = "black",alpha = 0.7) +
-  scale_size_continuous(name = "95% CI width",range = c(1, 6)) +
+  scale_size_continuous(name = "Trend certainty \n (1/CI width)",range = c(1, 6)) +
   scale_fill_gradient2(low = "blue", mid = "white", high = "red",midpoint = 0,
                        name = "Trend (slope)") +
   theme_classic() +
-  labs(x = "Time-series length (years)",y = "Start year",
+  labs(x = NULL,y = NULL,
        title = "Linyphiidae",
        subtitle="Trend uncertainty across different time windows") +
   theme(axis.text.x = element_text(hjust = 1),
@@ -961,15 +1030,24 @@ coccoidea_slope_draws <- map2_dfr(coc_slopes_draws,cocp_slide_draws, summarize_s
   #        CI_width = slope_upr - slope_lwr,
   #        year = cocyears[start_yr])
 
-cocp=ggplot(coccoidea_peak_slope_ci,
+coccoidea_slope_df <- coccoidea_slope_draws %>%
+  group_by(start_yr, end_yr, TSL) %>%
+  summarise(
+    slope_lwr = quantile(slope_draw, 0.025),
+    slope_upr = quantile(slope_draw, 0.975),
+    CI_width  = quantile(slope_draw, 0.975) - quantile(slope_draw, 0.025),
+    slope_mean = mean(slope_draw),
+    .groups = "drop")
+
+cocp=ggplot(coccoidea_slope_df,
             aes(x = TSL, y = start_yr)) +
-  geom_point(aes(size = CI_width,fill = slope_mean),
+  geom_point(aes(size = 1/CI_width,fill = slope_mean),
              shape = 21, color = "black",alpha = 0.7) +
-  scale_size_continuous(name = "95% CI width",range = c(1, 6)) +
+  scale_size_continuous(name = "Trend certainty \n (1/CI width)",range = c(1, 6)) +
   scale_fill_gradient2(low = "blue", mid = "white", high = "red",midpoint = 0,
                        name = "Trend (slope)") +
   theme_classic() +
-  labs(x = "Time-series length (years)",y = "Start year",
+  labs(x = NULL,y = NULL,
        title = "Coccoidea",
        subtitle="Trend uncertainty across different time windows") +
   theme(axis.text.x = element_text(hjust = 1),
@@ -1027,15 +1105,24 @@ nymphalidae_slope_draws<- map2_dfr(nym_slopes_draws,nymp_slide_draws, summarize_
   #        CI_width = slope_upr - slope_lwr,
   #        year = nymyears[start_yr])
 
-nymp=ggplot(nymphalidae_peak_slope_ci,
+nymphalidae_slope_df <- nymphalidae_slope_draws %>%
+  group_by(start_yr, end_yr, TSL) %>%
+  summarise(
+    slope_lwr = quantile(slope_draw, 0.025),
+    slope_upr = quantile(slope_draw, 0.975),
+    CI_width  = quantile(slope_draw, 0.975) - quantile(slope_draw, 0.025),
+    slope_mean = mean(slope_draw),
+    .groups = "drop")
+
+nymp=ggplot(nymphalidae_slope_df,
             aes(x = TSL, y = start_yr)) +
-  geom_point(aes(size = CI_width,fill = slope_mean),
+  geom_point(aes(size = 1/CI_width,fill = slope_mean),
              shape = 21, color = "black",alpha = 0.7) +
-  scale_size_continuous(name = "95% CI width",range = c(1, 6)) +
+  scale_size_continuous(name = "Trend certainty \n (1/CI width)",range = c(1, 6)) +
   scale_fill_gradient2(low = "blue", mid = "white", high = "red",midpoint = 0,
                        name = "Trend (slope)") +
   theme_classic() +
-  labs(x = "Time-series length (years)",y = "Start year",
+  labs(x = NULL,y = NULL,
        title = "Nymphalidae",
        subtitle="Trend uncertainty across different time windows") +
   theme(axis.text.x = element_text(hjust = 1),
@@ -1093,17 +1180,17 @@ chironomidae_slope_draws<- map2_dfr(chi_slopes_draws,chip_slide_draws, summarize
 chironomidae_slope_df <- chironomidae_slope_draws %>%
   group_by(start_yr, end_yr, TSL) %>%
   summarise(
-    slope_median = median(slope),
-    slope_mean   = mean(slope),
-    slope_sd= sd(slope),
-    CI_width = quantile(slope, 0.975) - quantile(slope, 0.025),
+    slope_median = median(slope_draw),
+    slope_mean   = mean(slope_draw),
+    slope_sd= sd(slope_draw),
+    CI_width = quantile(slope_draw, 0.975) - quantile(slope_draw, 0.025),
     .groups = "drop")
 
 chip=ggplot(chironomidae_slope_df,
             aes(x = TSL, y = start_yr)) +
-  geom_point(aes(size = CI_width,fill = slope_mean),
+  geom_point(aes(size = 1/CI_width,fill = slope_mean),
              shape = 21, color = "black",alpha = 0.7) +
-  scale_size_continuous(name = "95% CI width",range = c(1, 6)) +
+  scale_size_continuous(name = "Trend certainty \n (1/CI width)",range = c(1, 6)) +
   scale_fill_gradient2(low = "blue", mid = "white", high = "red",midpoint = 0,
                        name = "Trend (slope)") +
   theme_classic() +
@@ -1184,15 +1271,24 @@ acari_slope_draws <- map2_dfr(aca_slopes_draws,acap_slide_draws, summarize_slope
   #        CI_width = slope_upr - slope_lwr,
   #        year = acayears[start_yr])
 
-acap=ggplot(acari_peak_slope_ci,
+acari_slope_df <- acari_slope_draws %>%
+  group_by(start_yr, end_yr, TSL) %>%
+  summarise(
+    slope_lwr = quantile(slope_draw, 0.025),
+    slope_upr = quantile(slope_draw, 0.975),
+    CI_width  = quantile(slope_draw, 0.975) - quantile(slope_draw, 0.025),
+    slope_mean = mean(slope_draw),
+    .groups = "drop")
+
+acap=ggplot(acari_slope_df,
             aes(x = TSL, y = start_yr)) +
-  geom_point(aes(size = CI_width,fill = slope_mean),
+  geom_point(aes(size = 1/CI_width,fill = slope_mean),
              shape = 21, color = "black",alpha = 0.7) +
-  scale_size_continuous(name = "95% CI width",range = c(1, 6)) +
+  scale_size_continuous(name = "Trend certainty \n (1/CI width)",range = c(1, 6)) +
   scale_fill_gradient2(low = "blue", mid = "white", high = "red",midpoint = 0,
                        name = "Trend (slope)") +
   theme_classic() +
-  labs(x = "Time-series length (years)",y = "Start year",
+  labs(x = NULL,y = NULL,
        title = "Acari",
        subtitle="Trend uncertainty across different time windows") +
   theme(axis.text.x = element_text(hjust = 1),
@@ -1200,6 +1296,7 @@ acap=ggplot(acari_peak_slope_ci,
 
 #ARTH PLOTS####
 
+ggarrange(musp, scip)
 ggarrange(ichp, lycp)
 ggarrange(linp, ncol=2)
 
