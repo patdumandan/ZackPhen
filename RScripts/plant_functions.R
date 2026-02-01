@@ -1,3 +1,28 @@
+make_sliding_windows=function(dat, species_name) {
+
+  dat=dat%>%filter(species== species_name)
+
+  step_size=1
+  year_var=dat$year
+  nyrs=length(unique(year_var))
+  years_all=sort(unique(year_var))
+
+  min_win=5
+  max_win=length(years_all)
+
+  slide_data <- list()
+
+  for (nyr in seq(min_win, max_win, by = step_size)) {
+    for (start in seq(1, length(years_all) - nyr + 1)) {
+
+      yrs <- years_all[start:(start + nyr - 1)]
+
+      slide_data [[length(slide_data) + 1]] <-
+        dat%>%filter(year %in% yrs)
+    }}
+  return(slide_data)
+}
+
 make_plant_data <- function(df, global_df) {
   years <- unique(df$year)
   list(N= nrow(df),
