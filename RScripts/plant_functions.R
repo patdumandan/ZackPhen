@@ -39,6 +39,7 @@ make_plant_data <- function(df, global_df) {
        DOY_mean = mean(global_df$DOY))
 }
 
+#use for normal, non-sliding window data
 fit_plant_model <- function(
     species_name,
     data,
@@ -73,6 +74,49 @@ fit_plant_model <- function(
   return(fit)
 }
 
+#use for sliding window model fitting
+fit_plant_mod=function(data, model,
+                       out_dir = "spp_models") {
+
+  species_name=unique(data$species)
+  sp_df= data%>%filter(species == species_name)
+  yrs= data$year
+  start_yr=min(yrs)
+  end_yr=max(yrs)
+  win_length=length(unique(yrs))
+  window_id=paste0(species_name, "_", start_yr, "_", end_yr, "_", win_length)
+
+  plant_data= make_plant_data(sp_df, data)
+
+  #create dir that contains both csv and model files
+  fit_dir= file.path(out_dir, paste0("phenology_", window_id))
+
+  species_csv_dir= file.path(fit_dir, "cmdstan_csv")
+
+  #make sure output dir exists
+  dir.create(species_csv_dir, recursive = TRUE)
+
+  fit= model$sample(
+    data= plant_data,
+    seed= 123,
+    chains= 4,
+    parallel_chains= 4,
+    iter_sampling= 2000,
+    iter_warmup= 500,
+    output_dir= species_csv_dir,
+    save_warmup= FALSE) #to reduce size, not save warmup
+
+  fit_draws=fit$draws(format= "draws_df") #save only draws to reduce size
+
+  saveRDS(list(fit_draws= fit_draws,
+               meta= list(
+                 species= species_name,
+                 start_yr= start_yr,
+                 end_yr= end_yr,
+                 tsl= win_length,
+                 window_id = window_id)),
+          file = file.path(out_dir, paste0("phenology_", window_id, ".rds")))
+}
 
 extract_diagnostics <- function(fit) {
 
@@ -221,6 +265,33 @@ extract_beta_mu <- function(
       species = species_name,
       beta_mu = beta_mu)
 }
+
+#use for sliding window param extraction
+extract_beta_mu_win= function(mod_list, species_name) {
+
+  if(!is.null(species_name)) {
+
+    mod_list= mod_list[stringr::str_detect(mod_list, species_name)]
+  } #get only species-specific model files
+
+  beta_mu_list= lapply(mod_list, function(model_file) {
+
+    # if (!file.exists(model_file)) {
+    #   stop("Model file not found: ", model_file)
+    # }
+    obj= readRDS(model_file)
+
+    beta_mu_all= obj$fit_draws%>%select(dplyr::contains("beta_mu"))
+
+    beta_mu_draws=beta_mu_all%>%
+      mutate(species   = obj$meta$species,
+             start_yr  = obj$meta$start_yr,
+             end_yr    = obj$meta$end_yr,
+             tsl       = obj$meta$tsl,
+             window_id = obj$meta$window_id)
+
+    return(beta_mu_draws)
+  })}
 
 plot_plant_preds <- function(species_name, data,
                        model_dir = "C:\\pdumandanSLU\\PatD-SLU\\SLU\\phenology-project\\ZackPhen\\models\\",
