@@ -62,17 +62,23 @@ models
 
 plant\_functions.R: source code for fitting and examining plant models
 
+allreps\_models.R: code for fitting models across all time-windows for all plants and arthropods
+
+create\_reps.R: code for creating bubble plots for all plants and arthropods
+
+all\_repc\_ci.R: source code for creating CI width-TSL plot for all plants and arthropods
+
 arthropod\_stanmod\_PD.R: code to run for interfacing with Stan in R,
-and perform post-processing steps for arthropod models
+and perform post-processing steps for arthropod models (used if not re-fitting models)
 
 plant\_stanmod\_PD.R: code to run for interfacing with Stan in R, and
-perform post-processing steps for plant models
+perform post-processing steps for plant models (used if not re-fitting models)
 
 phen\_slide.R: script to extract slopes at different time-windows for
-both plants and arthropods
+both plants and arthropods (used if not re-fitting models)
 
 signal\_strength.R: script to examine trend directionality and strength
-for plants and arthropods
+for plants and arthropods (used if not re-fitting models)
 
 For inquiries, you may send an email to:
 [patdumandan@gmail.com](patdumandan@gmail.com).

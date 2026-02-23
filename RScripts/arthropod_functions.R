@@ -1,3 +1,27 @@
+make_sliding_windows=function(dat, species_name) {
+
+  dat=dat%>%filter(HoyeTaxon== species_name)
+
+  step_size=1
+  year_var=dat$Year
+  nyrs=length(unique(year_var))
+  years_all=sort(unique(year_var))
+
+  min_win=5
+  max_win=length(years_all)
+
+  slide_data <- list()
+
+  for (nyr in seq(min_win, max_win, by = step_size)) {
+    for (start in seq(1, length(years_all) - nyr + 1)) {
+
+      yrs <- years_all[start:(start + nyr - 1)]
+
+      slide_data [[length(slide_data) + 1]] <-
+        dat%>%filter(Year %in% yrs)
+    }}
+  return(slide_data)
+}
 make_arth_data <- function(df, global_df) {
   years <- unique(df$Year)
   list(N= nrow(df),
@@ -8,10 +32,54 @@ make_arth_data <- function(df, global_df) {
        DOYs= df$DOYs,
        year= df$Year,
        year_vec = (years-mean(years))/sd(years),
+       plot_id = as.integer(factor(df$plot_id)),
        Nplots  = length(unique(df$plot_id)),
-       plot_id = df$plot_id,
        DOY_sd  = sd(global_df$DOY),
        DOY_mean = mean(global_df$DOY))
+}
+
+#use for sliding window model fitting
+fit_arth_mod=function(data, model,
+                      out_dir = "arth_models") {
+
+  species_name=unique(data$HoyeTaxon)
+  sp_df= data%>%filter(HoyeTaxon == species_name)
+  yrs= data$Year
+  start_yr=min(yrs)
+  end_yr=max(yrs)
+  win_length=length(unique(yrs))
+  window_id=paste0(species_name, "_", start_yr, "_", end_yr, "_", win_length)
+
+  arth_data= make_arth_data(sp_df, data)
+
+  #create dir that contains both csv and model files
+  fit_dir= file.path(out_dir, paste0("phenology_", window_id))
+
+  species_csv_dir= file.path(fit_dir, "cmdstan_csv")
+
+  #make sure output dir exists
+  dir.create(species_csv_dir, recursive = TRUE)
+
+  fit= model$sample(
+    data= arth_data,
+    seed= 123,
+    chains= 4,
+    parallel_chains= 4,
+    iter_sampling= 2000,
+    iter_warmup= 500,
+    output_dir= species_csv_dir,
+    save_warmup= FALSE) #to reduce size, not save warmup
+
+  fit_draws=fit$draws(format= "draws_df") #save only draws to reduce size
+
+  saveRDS(list(fit_draws= fit_draws,
+               meta= list(
+                 species_name= species_name,
+                 start_yr= start_yr,
+                 end_yr= end_yr,
+                 tsl= win_length,
+                 window_id = window_id)),
+          file = file.path(out_dir, paste0("phenology_", window_id, ".rds")))
 }
 
 fit_arth_model <- function(
@@ -219,8 +287,8 @@ plot_arth_preds <- function(species_name, data,
 
       for (nd in seq_along(DOY)) {
         eta_post <- exp(alpha_year[, y_idx] + u_plot[, pl_idx] -
-          ((DOY[nd] - (mu[, y_idx] + u_plot_mu[, pl_idx]))^2 / (width[, y_idx]^2)) +
-          log_obs_days)
+                          ((DOY[nd] - (mu[, y_idx] + u_plot_mu[, pl_idx]))^2 / (width[, y_idx]^2)) +
+                          log_obs_days)
 
         eta_hat[nd] <- mean(eta_post)
       }

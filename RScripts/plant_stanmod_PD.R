@@ -7,7 +7,7 @@ library(bayesplot)
 library(posterior)
 library(ggridges)
 
-source("plant_functions.R")
+source("C:\\pdumandanSLU\\PatD-SLU\\SLU\\phenology-project\\ZackPhen\\Rscripts\\plant_functions.R")
 
 #data####
 dat_path="C:\\pdumandanSLU\\PatD-SLU\\SLU\\phenology-project\\ZackPhen\\data"
@@ -38,6 +38,7 @@ preds_output=lapply(species_list, plot_preds, data=plant_datA)
 
 #beta_mu####
 beta_mu_plant <- purrr::map_dfr(species_list, extract_beta_mu, data = plant_datA)
+
 plant_beta_mu_summary <- beta_mu_plant %>%
   group_by(species) %>%
   summarise(

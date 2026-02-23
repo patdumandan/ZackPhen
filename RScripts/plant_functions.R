@@ -34,7 +34,7 @@ make_plant_data <- function(df, global_df) {
        year= df$year,
        year_vec = (years-mean(years))/sd(years),
        Nplots  = length(unique(df$plot_id)),
-       plot_id = df$plot_id,
+       plot_id = as.integer(factor(df$plot_id)),
        DOY_sd  = sd(global_df$DOY),
        DOY_mean = mean(global_df$DOY))
 }
@@ -117,6 +117,66 @@ fit_plant_mod=function(data, model,
                  window_id = window_id)),
           file = file.path(out_dir, paste0("phenology_", window_id, ".rds")))
 }
+fit_plant_mod_ext = function(data, model,
+                             out_dir = "spp_models",
+                             overwrite = FALSE) {
+
+  species_name = unique(data$species)
+  sp_df = data %>% dplyr::filter(species == species_name)
+
+  yrs = data$year
+  start_yr = min(yrs)
+  end_yr = max(yrs)
+  win_length = length(unique(yrs))
+
+  window_id = paste0(species_name, "_", start_yr, "_", end_yr, "_", win_length)
+
+  # Expected output file
+  rds_file = file.path(out_dir, paste0("phenology_", window_id, ".rds"))
+
+  # 🔹 Skip if model already exists
+  if (file.exists(rds_file) && !overwrite) {
+    message("Skipping ", window_id, " (already fit)")
+    return(invisible(NULL))
+  }
+
+  plant_data = make_plant_data(sp_df, data)
+
+  fit_dir = file.path(out_dir, paste0("phenology_", window_id))
+  species_csv_dir = file.path(fit_dir, "cmdstan_csv")
+
+  dir.create(species_csv_dir, recursive = TRUE, showWarnings = FALSE)
+
+  fit = model$sample(
+    data = plant_data,
+    seed = 123,
+    chains = 4,
+    parallel_chains = 4,
+    iter_sampling = 2000,
+    iter_warmup = 500,
+    output_dir = species_csv_dir,
+    save_warmup = FALSE
+  )
+
+  fit_draws = fit$draws(format = "draws_df")
+
+  saveRDS(
+    list(
+      fit_draws = fit_draws,
+      meta = list(
+        species = species_name,
+        start_yr = start_yr,
+        end_yr = end_yr,
+        tsl = win_length,
+        window_id = window_id
+      )
+    ),
+    file = rds_file
+  )
+
+  message("Finished fitting ", window_id)
+}
+
 
 extract_diagnostics <- function(fit) {
 
@@ -294,8 +354,8 @@ extract_beta_mu_win= function(mod_list, species_name) {
   })}
 
 plot_plant_preds <- function(species_name, data,
-                       model_dir = "C:\\pdumandanSLU\\PatD-SLU\\SLU\\phenology-project\\ZackPhen\\models\\",
-                       out_dir = "predictions") {
+                             model_dir = "C:\\pdumandanSLU\\PatD-SLU\\SLU\\phenology-project\\ZackPhen\\models\\",
+                             out_dir = "predictions") {
 
   message("Plotting predictions of: ", species_name)
 
@@ -381,10 +441,10 @@ summarize_slopes <- function(slope_draws, dat) {
     start_yr = min(dat$year),
     end_yr   = max(dat$year),
     TSL = end_yr - start_yr + 1,
-   slope_draw  = slope_draws$slope)
-    # slope_med   = median(slope_draws$slope),
-    # slope_lwr   = quantile(slope_draws$slope, 0.025),
-    # slope_upr   = quantile(slope_draws$slope, 0.975))
+    slope_draw  = slope_draws$slope)
+  # slope_med   = median(slope_draws$slope),
+  # slope_lwr   = quantile(slope_draws$slope, 0.025),
+  # slope_upr   = quantile(slope_draws$slope, 0.975))
 }
 
 extract_LT_slope=function(dat, species) {
