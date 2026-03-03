@@ -80,5 +80,3 @@ both plants and arthropods (used if not re-fitting models)
 signal\_strength.R: script to examine trend directionality and strength
 for plants and arthropods (used if not re-fitting models)
 
-For inquiries, you may send an email to:
-[patdumandan@gmail.com](patdumandan@gmail.com).
