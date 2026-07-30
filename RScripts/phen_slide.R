@@ -1310,34 +1310,109 @@ ggarrange(colp, ncol=2)
 ggarrange(chip, ncol=2)
 
 #spring AT####
-step_size=1
-nyr=length(unique(airtemp_dat_apr_jul$year))
+step_size <- 1
 
 years_all <- sort(unique(airtemp_dat_apr_jul$year))
 
 springtemp_slide_draws <- list()
 
-for (nyr in seq(5, 27, by = 1)) {
+for (nyr in seq(5, 27, by = step_size)) {
   for (start in seq(1, length(years_all) - nyr + 1)) {
 
     yrs <- years_all[start:(start + nyr - 1)]
 
     springtemp_slide_draws[[length(springtemp_slide_draws) + 1]] <-
-      airtemp_dat_apr_jul %>% filter(year %in% yrs)
-  }}
+      airtemp_dat_apr_jul %>%
+      filter(year %in% yrs)
+  }
+}
 
-#spring temp (Apr-May)
-spring_draws <- lapply(springtemp_slide_draws,get_slope_and_pval_per_window,
-                       covar = "spring_mean_temp")
+spring_draws_df <- bind_rows(
+  lapply(
+    springtemp_slide_draws,
+    get_slope_and_pval_per_window,
+    covar = "spring_mean_temp"))%>%
+  mutate(
+    significance = if_else(pval < 0.05, "S", "NS"),
 
-spring_draws_df=bind_rows(lapply(springtemp_slide_draws,
-                                 get_slope_and_pval_per_window,covar = "spring_mean_temp"))%>%
-  mutate(significance=if_else(pval<0.05, "S", "NS"),
-         slope_sign = if_else(slope > 0, "Positive", "Negative"),
-         fill_slope = case_when(
-           significance == "S" & slope > 0 ~ "Positive",
-           significance == "S" & slope < 0 ~ "Negative",
-           TRUE ~ NA_character_))
+    trend_direction = case_when(
+      slope > 0 ~ "Positive",
+      slope < 0 ~ "Negative",
+      TRUE ~ "No change"),
+
+    # Directionality: signed slope
+    trend_directionality = slope,
+
+    # Precision/certainty: stronger evidence = larger -log10(p)
+    trend_precision = -log10(pval),
+
+    # Avoid Inf if pval is exactly 0
+    trend_precision = if_else(is.infinite(trend_precision), NA_real_, trend_precision),
+
+    # Magnitude: strength regardless of direction
+    slope_magnitude = abs(slope))
+
+spring_direction <- ggplot(
+  spring_draws_df,
+  aes(x = n_years, y = start_year, fill = trend_directionality)) +
+  geom_tile(color = "grey90", linewidth = 0.2) +
+  scale_fill_gradient2(
+    low = "darkblue",
+    mid = "grey95",
+    high = "darkred",
+    midpoint = 0,
+    name = "Slope",
+    oob = scales::squish) +
+  scale_x_continuous(breaks = scales::pretty_breaks()) +
+  scale_y_continuous(breaks = scales::pretty_breaks()) +
+  coord_fixed(ratio = 1) +
+  theme_classic(base_size = 11) +
+  labs(
+    x = NULL,
+    y = NULL,
+    title = "spring air temperature") +
+  theme(plot.title = element_text(face = "bold"),
+        panel.grid = element_blank(),
+        legend.position = "right")
+
+spring_precision <- ggplot(
+  spring_draws_df,
+  aes(x = n_years, y = start_year, fill = trend_precision)) +
+  geom_tile(color = "grey90", linewidth = 0.2) +
+  scale_fill_gradient(
+    low = "white",
+    high = "darkred",
+    name = expression(-log[10](p))) +
+  scale_x_continuous(breaks = scales::pretty_breaks()) +
+  scale_y_continuous(breaks = scales::pretty_breaks()) +
+  coord_fixed(ratio = 1) +
+  theme_classic(base_size = 11) +
+  labs(
+    x = NULL,
+    y = NULL,
+    title = "spring air temperature") +
+  theme(plot.title = element_text(face = "bold"),
+        panel.grid = element_blank(),
+        legend.position = "right")
+
+spring_magnitude <- ggplot(spring_draws_df,
+  aes(x = n_years, y = start_year, fill = slope_magnitude)) +
+  geom_tile(color = "grey90", linewidth = 0.2) +
+  scale_fill_gradient(
+    low = "grey95",
+    high = "darkred",
+    name = "Absolute slope") +
+  scale_x_continuous(breaks = scales::pretty_breaks()) +
+  scale_y_continuous(breaks = scales::pretty_breaks()) +
+  coord_fixed(ratio = 1) +
+  theme_classic(base_size = 11) +
+  labs(
+    x = NULL,
+    y = NULL,
+    title = "spring air temperature") +
+  theme(plot.title = element_text(face = "bold"),
+        panel.grid = element_blank(),
+        legend.position = "right")
 
 #summer AT####
 #summer temp(June-Aug)
@@ -1355,48 +1430,95 @@ for (nyr in seq(5, 27, by = 1)) {
 summer_draws <- lapply(summertemp_slide_draws,get_slope_and_pval_per_window,
                        covar = "summer_mean_temp")
 
-summer_draws_df=bind_rows(lapply(summertemp_slide_draws,
-                                 get_slope_and_pval_per_window,covar = "summer_mean_temp"))%>%
-  mutate(significance=if_else(pval<0.05, "S", "NS"),
-         slope_sign = if_else(slope > 0, "Positive", "Negative"),
-         fill_slope = case_when(
-           significance == "S" & slope > 0 ~ "Positive",
-           significance == "S" & slope < 0 ~ "Negative",
-           TRUE ~ NA_character_))
+summer_draws_df <- bind_rows(
+  lapply(
+    summertemp_slide_draws,
+    get_slope_and_pval_per_window,
+    covar = "summer_mean_temp"))%>%
+  mutate(
+    significance = if_else(pval < 0.05, "S", "NS"),
 
+    trend_direction = case_when(
+      slope > 0 ~ "Positive",
+      slope < 0 ~ "Negative",
+      TRUE ~ "No change"),
 
-summerp=ggplot(summer_draws_df, aes(x = n_years, y = start_year)) +
-  geom_point(aes(size = abs(slope),color = slope_sign, fill=fill_slope),
-             shape = 21,alpha = 0.8,stroke = 1) +
-  scale_color_manual(values = c("Positive" = "red", "Negative" = "blue"),
-                     name = "Trend (slope)") +
-  scale_fill_manual(values = c("Positive" = "red", "Negative" = "blue"),
-                    guide = "none",na.value = NA) +
-  scale_size_continuous(name = "Slope magnitude",range = c(1, 6)) +
-  theme_classic() +
+    # Directionality: signed slope
+    trend_directionality = slope,
+
+    # Precision/certainty: stronger evidence = larger -log10(p)
+    trend_precision = -log10(pval),
+
+    # Avoid Inf if pval is exactly 0
+    trend_precision = if_else(is.infinite(trend_precision), NA_real_, trend_precision),
+
+    # Magnitude: strength regardless of direction
+    slope_magnitude = abs(slope))
+
+summer_direction <- ggplot(
+  summer_draws_df,
+  aes(x = n_years, y = start_year, fill = trend_directionality)) +
+  geom_tile(color = "grey90", linewidth = 0.2) +
+  scale_fill_gradient2(
+    low = "darkblue",
+    mid = "grey95",
+    high = "darkred",
+    midpoint = 0,
+    name = "Slope",
+    oob = scales::squish) +
+  scale_x_continuous(breaks = scales::pretty_breaks()) +
+  scale_y_continuous(breaks = scales::pretty_breaks()) +
+  coord_fixed(ratio = 1) +
+  theme_classic(base_size = 11) +
   labs(
-    x = "Time-series length (years)",
-    y = "Start year",
-    title = "Summer air temperature",
-    subtitle = "Trend uncertainty across different time windows") +
-  theme(plot.title = element_text(face = "bold"))
+    x = NULL,
+    y = NULL,
+    title = "summer air temperature") +
+  theme(plot.title = element_text(face = "bold"),
+        panel.grid = element_blank(),
+        legend.position = "right")
 
-springp=ggplot(spring_draws_df, aes(x = n_years, y = start_year)) +
-  geom_point(aes(size = abs(slope),color = slope_sign, fill=fill_slope),
-             shape = 21,alpha = 0.8,stroke = 1) +
-  scale_color_manual(values = c("Positive" = "red", "Negative" = "blue"),
-                     name = "Trend (slope)") +
-  scale_fill_manual(values = c("Positive" = "red", "Negative" = "blue"),
-                    guide = "none",na.value = NA) +
-  scale_size_continuous(name = "Slope magnitude",range = c(1, 6)) +
-  theme_classic() +
+summer_precision <- ggplot(
+  summer_draws_df,
+  aes(x = n_years, y = start_year, fill = trend_precision)) +
+  geom_tile(color = "grey90", linewidth = 0.2) +
+  scale_fill_gradient(
+    low = "white",
+    high = "darkred",
+    name = expression(-log[10](p))) +
+  scale_x_continuous(breaks = scales::pretty_breaks()) +
+  scale_y_continuous(breaks = scales::pretty_breaks()) +
+  coord_fixed(ratio = 1) +
+  theme_classic(base_size = 11) +
   labs(
-    x = "Time-series length (years)",
-    y = "Start year",
-    title = "Spring air temperature",
-    subtitle = "Trend uncertainty across different time windows") +
-  theme(plot.title = element_text(face = "bold"))
+    x = NULL,
+    y = NULL,
+    title = "summer air temperature") +
+  theme(plot.title = element_text(face = "bold"),
+        panel.grid = element_blank(),
+        legend.position = "right")
+
+summer_magnitude <- ggplot(summer_draws_df,
+                           aes(x = n_years, y = start_year, fill = slope_magnitude)) +
+  geom_tile(color = "grey90", linewidth = 0.2) +
+  scale_fill_gradient(
+    low = "grey95",
+    high = "darkred",
+    name = "Absolute slope") +
+  scale_x_continuous(breaks = scales::pretty_breaks()) +
+  scale_y_continuous(breaks = scales::pretty_breaks()) +
+  coord_fixed(ratio = 1) +
+  theme_classic(base_size = 11) +
+  labs(
+    x = NULL,
+    y = NULL,
+    title = "summer air temperature") +
+  theme(plot.title = element_text(face = "bold"),
+        panel.grid = element_blank(),
+        legend.position = "right")
+
 #snow cover####
+#Note:re-run get_pval function here because for some reason it's breaking
 step_size=1
 nyr=length(unique(snow_ave$Year))
 
@@ -1417,37 +1539,106 @@ for (nyr in seq(5, 29, by = 1)) {
 snow_draws <- lapply(snow_slide_draws,get_slope_and_pval_per_window,
                      covar = "Jun10_cover")
 
-snow_draws_df=bind_rows(lapply(snow_slide_draws,
-                               get_slope_and_pval_per_window,covar = "Jun10_cover"))%>%
-  mutate(significance=if_else(pval<0.05, "S", "NS"),
-         slope_sign = if_else(slope > 0, "Positive", "Negative"),
-         fill_slope = case_when(
-           significance == "S" & slope > 0 ~ "Positive",
-           significance == "S" & slope < 0 ~ "Negative",
-           TRUE ~ NA_character_))
+snow_draws_df <- bind_rows(
+  lapply(
+    snow_slide_draws,
+    get_slope_and_pval_per_window,
+    covar = "Jun10_cover"))%>%
+  mutate(
+    significance = if_else(pval < 0.05, "S", "NS"),
 
-snowp=ggplot(snow_draws_df, aes(x = n_Years, y = start_Year)) +
-  geom_point(aes(size = abs(slope),color = slope_sign, fill=fill_slope),
-             shape = 21,alpha = 0.8,stroke = 1) +
-  scale_color_manual(values = c("Positive" = "red", "Negative" = "blue"),
-                     name = "Trend (slope)") +
-  scale_fill_manual(values = c("Positive" = "red", "Negative" = "blue"),
-                    guide = "none",na.value = NA) +
-  scale_size_continuous(name = "Slope magnitude",range = c(1, 6)) +
-  theme_classic() +
+    trend_direction = case_when(
+      slope > 0 ~ "Positive",
+      slope < 0 ~ "Negative",
+      TRUE ~ "No change"),
+
+    # Directionality: signed slope
+    trend_directionality = slope,
+
+    # Precision/certainty: stronger evidence = larger -log10(p)
+    trend_precision = -log10(pval),
+
+    # Avoid Inf if pval is exactly 0
+    trend_precision = if_else(is.infinite(trend_precision), NA_real_, trend_precision),
+
+    # Magnitude: strength regardless of direction
+    slope_magnitude = abs(slope))
+
+snow_direction <- ggplot(
+  snow_draws_df,
+  aes(x = n_years, y = start_year, fill = trend_directionality)) +
+  geom_tile(color = "grey90", linewidth = 0.2) +
+  scale_fill_gradient2(
+    low = "darkblue",
+    mid = "grey95",
+    high = "darkred",
+    midpoint = 0,
+    name = "Slope",
+    oob = scales::squish) +
+  scale_x_continuous(breaks = scales::pretty_breaks()) +
+  scale_y_continuous(breaks = scales::pretty_breaks()) +
+  coord_fixed(ratio = 1) +
+  theme_classic(base_size = 11) +
   labs(
-    x = "Time-series length (years)",
-    y = "Start year",
-    title = "Spring Snow Cover",
-    subtitle = "Trend uncertainty across different time windows") +
-  theme(plot.title = element_text(face = "bold"))
+    x = NULL,
+    y = NULL,
+    title = "snow cover") +
+  theme(plot.title = element_text(face = "bold"),
+        panel.grid = element_blank(),
+        legend.position = "right")
+
+snow_precision <- ggplot(
+  snow_draws_df,
+  aes(x = n_years, y = start_year, fill = trend_precision)) +
+  geom_tile(color = "grey90", linewidth = 0.2) +
+  scale_fill_gradient(
+    low = "white",
+    high = "darkred",
+    name = expression(-log[10](p))) +
+  scale_x_continuous(breaks = scales::pretty_breaks()) +
+  scale_y_continuous(breaks = scales::pretty_breaks()) +
+  coord_fixed(ratio = 1) +
+  theme_classic(base_size = 11) +
+  labs(
+    x = NULL,
+    y = NULL,
+    title = "snow cover") +
+  theme(plot.title = element_text(face = "bold"),
+        panel.grid = element_blank(),
+        legend.position = "right")
+
+snow_magnitude <- ggplot(snow_draws_df,
+                         aes(x = n_years, y = start_year, fill = slope_magnitude)) +
+  geom_tile(color = "grey90", linewidth = 0.2) +
+  scale_fill_gradient(
+    low = "grey95",
+    high = "darkred",
+    name = "Absolute slope") +
+  scale_x_continuous(breaks = scales::pretty_breaks()) +
+  scale_y_continuous(breaks = scales::pretty_breaks()) +
+  coord_fixed(ratio = 1) +
+  theme_classic(base_size = 11) +
+  labs(
+    x = NULL,
+    y = NULL,
+    title = "snow cover") +
+  theme(plot.title = element_text(face = "bold"),
+        panel.grid = element_blank(),
+        legend.position = "right")
 
 #COVARS PLOTS####
-ggarrange(springp,summerp, snowp, ncol = 3)
+covp=ggarrange(spring_direction, spring_precision, summer_direction, summer_precision,
+          snow_direction, snow_precision, ncol=2, nrow=3)
+annotate_figure(covp,
+                left = text_grob("Start year", rot = 90, size = 12),
+                bottom = text_grob("Time-series length (years)", size = 12))
+
+covmag=ggarrange(spring_magnitude,summer_magnitude,
+               snow_magnitude, nrow=3)
+annotate_figure(covmag,
+                left = text_grob("Start year", rot = 90, size = 12),
+                bottom = text_grob("Time-series length (years)", size = 12))
 
 allt=ggarrange(dryp,musp, silp, ichp, papp, chip,
                 common.legend = T, ncol=2, nrow=3, legend = "right")
 
-annotate_figure(allt,
-                left = text_grob("Start year", rot = 90, size = 12),
-                bottom = text_grob("Time-series length (years)", size = 12))

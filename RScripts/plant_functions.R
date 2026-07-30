@@ -452,16 +452,16 @@ extract_LT_slope=function(dat, species) {
 }
 
 get_slope_and_pval_per_window <- function(dat, covar) {
-  fit <- lm(reformulate("year", covar), data = dat)
+  fit <- lm(reformulate("Year", covar), data = dat)
   sm <- summary(fit)
 
   tibble(
     covar = covar,
-    start_year = min(dat$year), #Year for snow
-    end_year   = max(dat$year),
-    n_years    = length(unique(dat$year)),
-    slope = coef(fit)[["year"]],
-    pval  = sm$coefficients["year", "Pr(>|t|)"]
+    start_year = min(dat$Year), #Year for snow
+    end_year   = max(dat$Year),
+    n_years    = length(unique(dat$Year)),
+    slope = coef(fit)[["Year"]],
+    pval  = sm$coefficients["Year", "Pr(>|t|)"]
   )
 }
 
