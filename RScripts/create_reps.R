@@ -1,9 +1,15 @@
+library(dplyr)
+library(ggplot2)
+library(purrr)
+library(ggpubr)
+library(scales)
+
 #call model output names
 mod_list=list.files(path="/scratch/project_2017453/spp_models",
                     pattern = "\\.rds$", full.names=TRUE)
 
 arth_list=list.files(path="/scratch/project_2017453/arth_models",
-                    pattern = "\\.rds$", full.names=TRUE)
+                     pattern = "\\.rds$", full.names=TRUE)
 
 #extract relevant global trend param
 dryas_betamu <- extract_beta_mu_win(mod_list, species_name="Dryas")
@@ -215,412 +221,465 @@ cas_betamu <- do.call(rbind, cas_betamu)
 sal_betamu <- do.call(rbind, sal_betamu)
 sax_betamu <- do.call(rbind, sax_betamu)
 
-chironomidae_slope_df <- chi_betamu %>%
-  group_by(start_yr, end_yr, tsl) %>%
-  summarise(
-    slope_median = median(beta_mu),
-    slope_mean   = mean(beta_mu),
-    slope_sd= sd(beta_mu),
-    CI_width = quantile(beta_mu, 0.975) - quantile(beta_mu, 0.025),
-    .groups = "drop")
+betamu_list <- list(
+  Dryas         = dry_betamu,
+  Silene        = sil_betamu,
+  Papaver       = pap_betamu,
+  Cassiope      = cas_betamu,
+  Salix         = sal_betamu,
+  Saxifraga     = sax_betamu,
+  Muscidae      = mus_betamu,
+  Chironomidae  = chi_betamu,
+  Ichneumonidae = ich_betamu,
+  Sciaridae     = sci_betamu,
+  Lycosidae     = lyc_betamu,
+  Nymphalidae   = nym_betamu,
+  Phoridae      = pho_betamu,
+  Acari         = aca_betamu,
+  Collembola    = col_betamu,
+  Linyphiidae   = lin_betamu,
+  Coccoidea     = coc_betamu
+)
 
-sciaridae_slope_df <- sci_betamu %>%
-  group_by(start_yr, end_yr, tsl) %>%
-  summarise(
-    slope_median = median(beta_mu),
-    slope_mean   = mean(beta_mu),
-    slope_sd= sd(beta_mu),
-    CI_width = quantile(beta_mu, 0.975) - quantile(beta_mu, 0.025),
-    .groups = "drop")
+slope_df_all <- imap_dfr(betamu_list, function(dat, taxon_name) {
+  dat %>%
+    group_by(start_yr, end_yr, tsl) %>%
+    summarise(
+      slope_median = median(beta_mu, na.rm = TRUE),
+      slope_mean   = mean(beta_mu, na.rm = TRUE),
+      slope_sd     = sd(beta_mu, na.rm = TRUE),
+      CI_low       = quantile(beta_mu, 0.025, na.rm = TRUE),
+      CI_high      = quantile(beta_mu, 0.975, na.rm = TRUE),
+      CI_width     = CI_high - CI_low,
 
-ichneumonidae_slope_df <- ich_betamu %>%
-  group_by(start_yr, end_yr, tsl) %>%
-  summarise(
-    slope_median = median(beta_mu),
-    slope_mean   = mean(beta_mu),
-    slope_sd= sd(beta_mu),
-    CI_width = quantile(beta_mu, 0.975) - quantile(beta_mu, 0.025),
-    .groups = "drop")
+      # Posterior probabilities of direction
+      prob_positive = mean(beta_mu > 0, na.rm = TRUE),
+      prob_negative = mean(beta_mu < 0, na.rm = TRUE),
 
-muscidae_slope_df <- mus_betamu %>%
-  group_by(start_yr, end_yr, tsl) %>%
-  summarise(
-    slope_median = median(beta_mu),
-    slope_mean   = mean(beta_mu),
-    slope_sd= sd(beta_mu),
-    CI_width = quantile(beta_mu, 0.975) - quantile(beta_mu, 0.025),
-    .groups = "drop")
+      # Direction certainty: high if most draws agree on sign
+      direction_certainty = pmax(prob_positive, prob_negative),
 
-dryas_slope_df <- dry_betamu %>%
-  group_by(start_yr, end_yr, tsl) %>%
-  summarise(
-    slope_median = median(beta_mu),
-    slope_mean   = mean(beta_mu),
-    slope_sd= sd(beta_mu),
-    CI_width = quantile(beta_mu, 0.975) - quantile(beta_mu, 0.025),
-    .groups = "drop")
+      # CI-based certainty: high when CI is narrow
+      trend_precision = 1 / CI_width,
 
-salix_slope_df <- sal_betamu %>%
-  group_by(start_yr, end_yr, tsl) %>%
-  summarise(
-    slope_median = median(beta_mu),
-    slope_mean   = mean(beta_mu),
-    slope_sd= sd(beta_mu),
-    CI_width = quantile(beta_mu, 0.975) - quantile(beta_mu, 0.025),
-    .groups = "drop")
-
-saxifraga_slope_df <- sax_betamu %>%
-  group_by(start_yr, end_yr, tsl) %>%
-  summarise(
-    slope_median = median(beta_mu),
-    slope_mean   = mean(beta_mu),
-    slope_sd= sd(beta_mu),
-    CI_width = quantile(beta_mu, 0.975) - quantile(beta_mu, 0.025),
-    .groups = "drop")
-
-silene_slope_df <- sil_betamu %>%
-  group_by(start_yr, end_yr, tsl) %>%
-  summarise(
-    slope_median = median(beta_mu),
-    slope_mean   = mean(beta_mu),
-    slope_sd= sd(beta_mu),
-    CI_width = quantile(beta_mu, 0.975) - quantile(beta_mu, 0.025),
-    .groups = "drop")
-
-cassiope_slope_df <- cas_betamu %>%
-  group_by(start_yr, end_yr, tsl) %>%
-  summarise(
-    slope_median = median(beta_mu),
-    slope_mean   = mean(beta_mu),
-    slope_sd= sd(beta_mu),
-    CI_width = quantile(beta_mu, 0.975) - quantile(beta_mu, 0.025),
-    .groups = "drop")
-
-papaver_slope_df <- pap_betamu %>%
-  group_by(start_yr, end_yr, tsl) %>%
-  summarise(
-    slope_median = median(beta_mu),
-    slope_mean   = mean(beta_mu),
-    slope_sd= sd(beta_mu),
-    CI_width = quantile(beta_mu, 0.975) - quantile(beta_mu, 0.025),
-    .groups = "drop")
-
-ichp=ggplot(ichneumonidae_slope_df,
-            aes(x = tsl, y = start_yr)) +
-  geom_point(aes(size = 1/CI_width,fill = slope_mean),
-             shape = 21, color = "black",alpha = 0.7) +
-  scale_size_continuous(name = "Trend certainty\n(1 / CI width)",range = c(1, 6)) +
-  scale_fill_gradient2(low = "blue", mid = "white", high = "red",midpoint = 0,
-                       name = "Trend (slope)") +
-  theme_classic() +
-  labs(x = NULL,y =NULL,
-       title = "Ichneumonidae")+
-  #     subtitle="Trend uncertainty across different time windows") +
-  theme(axis.text.x = element_text(hjust = 1),
-        plot.title = element_text(face = "bold"))
-
-scip=ggplot(sciaridae_slope_df,
-            aes(x = tsl, y = start_yr)) +
-  geom_point(aes(size = 1/CI_width,fill = slope_mean),
-             shape = 21, color = "black",alpha = 0.7) +
-  scale_size_continuous(name = "Trend certainty\n(1 / CI width)",range = c(1, 6)) +
-  scale_fill_gradient2(low = "blue", mid = "white", high = "red",midpoint = 0,
-                       name = "Trend (slope)") +
-  theme_classic() +
-  labs(x = NULL,y =NULL,
-       title = "Sciaridae")+
-  #     subtitle="Trend uncertainty across different time windows") +
-  theme(axis.text.x = element_text(hjust = 1),
-        plot.title = element_text(face = "bold"))
-phoridae_slope_df <- pho_betamu %>%
-  group_by(start_yr, end_yr, tsl) %>%
-  summarise(
-    slope_median = median(beta_mu),
-    slope_mean   = mean(beta_mu),
-    slope_sd= sd(beta_mu),
-    CI_width = quantile(beta_mu, 0.975) - quantile(beta_mu, 0.025),
-    .groups = "drop")
-
-phop=ggplot(phoridae_slope_df,
-            aes(x = tsl, y = start_yr)) +
-  geom_point(aes(size = 1/CI_width,fill = slope_mean),
-             shape = 21, color = "black",alpha = 0.7) +
-  scale_size_continuous(name = "Trend certainty\n(1 / CI width)",range = c(1, 6)) +
-  scale_fill_gradient2(low = "blue", mid = "white", high = "red",midpoint = 0,
-                       name = "Trend (slope)") +
-  theme_classic() +
-  labs(x = NULL,y =NULL,
-       title = "Phoridae")+
-  #     subtitle="Trend uncertainty across different time windows") +
-  theme(axis.text.x = element_text(hjust = 1),
-        plot.title = element_text(face = "bold"))
-
-nymphalidae_slope_df <- nym_betamu %>%
-  group_by(start_yr, end_yr, tsl) %>%
-  summarise(
-    slope_median = median(beta_mu),
-    slope_mean   = mean(beta_mu),
-    slope_sd= sd(beta_mu),
-    CI_width = quantile(beta_mu, 0.975) - quantile(beta_mu, 0.025),
-    .groups = "drop")
-
-nymp=ggplot(nymphalidae_slope_df,
-            aes(x = tsl, y = start_yr)) +
-  geom_point(aes(size = 1/CI_width,fill = slope_mean),
-             shape = 21, color = "black",alpha = 0.7) +
-  scale_size_continuous(name = "Trend certainty\n(1 / CI width)",range = c(1, 6)) +
-  scale_fill_gradient2(low = "blue", mid = "white", high = "red",midpoint = 0,
-                       name = "Trend (slope)") +
-  theme_classic() +
-  labs(x = NULL,y =NULL,
-       title = "Nymphalidae")+
-  #     subtitle="Trend uncertainty across different time windows") +
-  theme(axis.text.x = element_text(hjust = 1),
-        plot.title = element_text(face = "bold"))
-
-lycosidae_slope_df <- lyc_betamu %>%
-  group_by(start_yr, end_yr, tsl) %>%
-  summarise(
-    slope_median = median(beta_mu),
-    slope_mean   = mean(beta_mu),
-    slope_sd= sd(beta_mu),
-    CI_width = quantile(beta_mu, 0.975) - quantile(beta_mu, 0.025),
-    .groups = "drop")
-
-lycp=ggplot(lycosidae_slope_df,
-            aes(x = tsl, y = start_yr)) +
-  geom_point(aes(size = 1/CI_width,fill = slope_mean),
-             shape = 21, color = "black",alpha = 0.7) +
-  scale_size_continuous(name = "Trend certainty\n(1 / CI width)",range = c(1, 6)) +
-  scale_fill_gradient2(low = "blue", mid = "white", high = "red",midpoint = 0,
-                       name = "Trend (slope)") +
-  theme_classic() +
-  labs(x = NULL,y =NULL,
-       title = "Lycosidae")+
-  #     subtitle="Trend uncertainty across different time windows") +
-  theme(axis.text.x = element_text(hjust = 1),
-        plot.title = element_text(face = "bold"))
-
-linyphiidae_slope_df <- lin_betamu %>%
-  group_by(start_yr, end_yr, tsl) %>%
-  summarise(
-    slope_median = median(beta_mu),
-    slope_mean   = mean(beta_mu),
-    slope_sd= sd(beta_mu),
-    CI_width = quantile(beta_mu, 0.975) - quantile(beta_mu, 0.025),
-    .groups = "drop")
-
-linp=ggplot(linyphiidae_slope_df,
-            aes(x = tsl, y = start_yr)) +
-  geom_point(aes(size = 1/CI_width,fill = slope_mean),
-             shape = 21, color = "black",alpha = 0.7) +
-  scale_size_continuous(name = "Trend certainty\n(1 / CI width)",range = c(1, 6)) +
-  scale_fill_gradient2(low = "blue", mid = "white", high = "red",midpoint = 0,
-                       name = "Trend (slope)") +
-  theme_classic() +
-  labs(x = NULL,y =NULL,
-       title = "Linyphiidae")+
-  #     subtitle="Trend uncertainty across different time windows") +
-  theme(axis.text.x = element_text(hjust = 1),
-        plot.title = element_text(face = "bold"))
-
-collembola_slope_df <- col_betamu %>%
-  group_by(start_yr, end_yr, tsl) %>%
-  summarise(
-    slope_median = median(beta_mu),
-    slope_mean   = mean(beta_mu),
-    slope_sd= sd(beta_mu),
-    CI_width = quantile(beta_mu, 0.975) - quantile(beta_mu, 0.025),
-    .groups = "drop")
-
-colp=ggplot(collembola_slope_df,
-            aes(x = tsl, y = start_yr)) +
-  geom_point(aes(size = 1/CI_width,fill = slope_mean),
-             shape = 21, color = "black",alpha = 0.7) +
-  scale_size_continuous(name = "Trend certainty\n(1 / CI width)",range = c(1, 6)) +
-  scale_fill_gradient2(low = "blue", mid = "white", high = "red",midpoint = 0,
-                       name = "Trend (slope)") +
-  theme_classic() +
-  labs(x = NULL,y =NULL,
-       title = "Collembola")+
-  #     subtitle="Trend uncertainty across different time windows") +
-  theme(axis.text.x = element_text(hjust = 1),
-        plot.title = element_text(face = "bold"))
-
-coccoidea_slope_df <- coc_betamu %>%
-  group_by(start_yr, end_yr, tsl) %>%
-  summarise(
-    slope_median = median(beta_mu),
-    slope_mean   = mean(beta_mu),
-    slope_sd= sd(beta_mu),
-    CI_width = quantile(beta_mu, 0.975) - quantile(beta_mu, 0.025),
-    .groups = "drop")
-
-cocp=ggplot(coccoidea_slope_df,
-            aes(x = tsl, y = start_yr)) +
-  geom_point(aes(size = 1/CI_width,fill = slope_mean),
-             shape = 21, color = "black",alpha = 0.7) +
-  scale_size_continuous(name = "Trend certainty\n(1 / CI width)",range = c(1, 6)) +
-  scale_fill_gradient2(low = "blue", mid = "white", high = "red",midpoint = 0,
-                       name = "Trend (slope)") +
-  theme_classic() +
-  labs(x = NULL,y =NULL,
-       title = "Coccoidea")+
-  #     subtitle="Trend uncertainty across different time windows") +
-  theme(axis.text.x = element_text(hjust = 1),
-        plot.title = element_text(face = "bold"))
-
-acari_slope_df <- aca_betamu %>%
-  group_by(start_yr, end_yr, tsl) %>%
-  summarise(
-    slope_median = median(beta_mu),
-    slope_mean   = mean(beta_mu),
-    slope_sd= sd(beta_mu),
-    CI_width = quantile(beta_mu, 0.975) - quantile(beta_mu, 0.025),
-    .groups = "drop")
-
-acap=ggplot(acari_slope_df,
-            aes(x = tsl, y = start_yr)) +
-  geom_point(aes(size = 1/CI_width,fill = slope_mean),
-             shape = 21, color = "black",alpha = 0.7) +
-  scale_size_continuous(name = "Trend certainty\n(1 / CI width)",range = c(1, 6)) +
-  scale_fill_gradient2(low = "blue", mid = "white", high = "red",midpoint = 0,
-                       name = "Trend (slope)") +
-  theme_classic() +
-  labs(x = NULL,y =NULL,
-       title = "Acari")+
-  #     subtitle="Trend uncertainty across different time windows") +
-  theme(axis.text.x = element_text(hjust = 1),
-        plot.title = element_text(face = "bold"))
-
-musp=ggplot(muscidae_slope_df,
-            aes(x = tsl, y = start_yr)) +
-  geom_point(aes(size = 1/CI_width,fill = slope_mean),
-             shape = 21, color = "black",alpha = 0.7) +
-  scale_size_continuous(name = "Trend certainty\n(1 / CI width)",range = c(1, 6)) +
-  scale_fill_gradient2(low = "blue", mid = "white", high = "red",midpoint = 0,
-                       name = "Trend (slope)") +
-  theme_classic() +
-  labs(x = NULL,y =NULL,
-       title = "Muscidae")+
-  #     subtitle="Trend uncertainty across different time windows") +
-  theme(axis.text.x = element_text(hjust = 1),
-        plot.title = element_text(face = "bold"))
-
-chip=ggplot(chironomidae_slope_df,
-            aes(x = tsl, y = start_yr)) +
-  geom_point(aes(size = 1/CI_width,fill = slope_mean),
-             shape = 21, color = "black",alpha = 0.7) +
-  scale_size_continuous(name = "Trend certainty\n(1 / CI width)",range = c(1, 6)) +
-  scale_fill_gradient2(low = "blue", mid = "white", high = "red",midpoint = 0,
-                       name = "Trend (slope)") +
-  theme_classic() +
-  labs(x = NULL,y =NULL,
-       title = "Chironomidae")+
-  #     subtitle="Trend uncertainty across different time windows") +
-  theme(axis.text.x = element_text(hjust = 1),
-        plot.title = element_text(face = "bold"))
-
-dryp=ggplot(dryas_slope_df,
-            aes(x = tsl, y = start_yr)) +
-  geom_point(aes(size = 1/CI_width,fill = slope_mean),
-             shape = 21, color = "black",alpha = 0.7) +
-  scale_size_continuous(name = "Trend certainty\n(1 / CI width)",range = c(1, 6)) +
-  scale_fill_gradient2(low = "blue", mid = "white", high = "red",midpoint = 0,
-                       name = "Trend (slope)") +
-  theme_classic() +
-  labs(x = NULL,y =NULL,
-       title = "Dryas")+
-  #     subtitle="Trend uncertainty across different time windows") +
-  theme(axis.text.x = element_text(hjust = 1),
-        plot.title = element_text(face = "bold"))
-
-saxp=ggplot(saxifraga_slope_df,
-            aes(x = tsl, y = start_yr)) +
-  geom_point(aes(size = 1/CI_width,fill = slope_mean),
-             shape = 21, color = "black",alpha = 0.7) +
-  scale_size_continuous(name = "Trend certainty\n(1 / CI width)",range = c(1, 6)) +
-  scale_fill_gradient2(low = "blue", mid = "white", high = "red",midpoint = 0,
-                       name = "Trend (slope)") +
-  theme_classic() +
-  labs(x = NULL,y =NULL,
-       title = "Saxifraga")+
-  #     subtitle="Trend uncertainty across different time windows") +
-  theme(axis.text.x = element_text(hjust = 1),
-        plot.title = element_text(face = "bold"))
-
-silp=ggplot(silene_slope_df,
-            aes(x = tsl, y = start_yr)) +
-  geom_point(aes(size = 1/CI_width,fill = slope_mean),
-             shape = 21, color = "black",alpha = 0.7) +
-  scale_size_continuous(name = "Trend certainty\n(1 / CI width)",range = c(1, 6)) +
-  scale_fill_gradient2(low = "blue", mid = "white", high = "red",midpoint = 0,
-                       name = "Trend (slope)") +
-  theme_classic() +
-  labs(x = NULL,y =NULL,
-       title = "Silene")+
-  #     subtitle="Trend uncertainty across different time windows") +
-  theme(axis.text.x = element_text(hjust = 1),
-        plot.title = element_text(face = "bold"))
-
-salp=ggplot(ichneumonidae_slope_df,
-            aes(x = tsl, y = start_yr)) +
-  geom_point(aes(size = 1/CI_width,fill = slope_mean),
-             shape = 21, color = "black",alpha = 0.7) +
-  scale_size_continuous(name = "Trend certainty\n(1 / CI width)",range = c(1, 6)) +
-  scale_fill_gradient2(low = "blue", mid = "white", high = "red",midpoint = 0,
-                       name = "Trend (slope)") +
-  theme_classic() +
-  labs(x = NULL,y =NULL,
-       title = "Salix")+
-  #     subtitle="Trend uncertainty across different time windows") +
-  theme(axis.text.x = element_text(hjust = 1),
-        plot.title = element_text(face = "bold"))
-
-papp=ggplot(papaver_slope_df,
-            aes(x = tsl, y = start_yr)) +
-  geom_point(aes(size = 1/CI_width,fill = slope_mean),
-             shape = 21, color = "black",alpha = 0.7) +
-  scale_size_continuous(name = "Trend certainty\n(1 / CI width)",range = c(1, 6)) +
-  scale_fill_gradient2(low = "blue", mid = "white", high = "red",midpoint = 0,
-                       name = "Trend (slope)") +
-  theme_classic() +
-  labs(x = NULL,y =NULL,
-       title = "Papaver")+
-  #     subtitle="Trend uncertainty across different time windows") +
-  theme(axis.text.x = element_text(hjust = 1),
-        plot.title = element_text(face = "bold"))
-
-casp=ggplot(papaver_slope_df,
-            aes(x = tsl, y = start_yr)) +
-  geom_point(aes(size = 1/CI_width,fill = slope_mean),
-             shape = 21, color = "black",alpha = 0.7) +
-  scale_size_continuous(name = "Trend certainty\n(1 / CI width)",range = c(1, 6)) +
-  scale_fill_gradient2(low = "blue", mid = "white", high = "red",midpoint = 0,
-                       name = "Trend (slope)") +
-  theme_classic() +
-  labs(x = NULL,y =NULL,
-       title = "Cassiope")+
-  #     subtitle="Trend uncertainty across different time windows") +
-  theme(axis.text.x = element_text(hjust = 1),
-        plot.title = element_text(face = "bold"))
-
-allreps_tsl=ggarrange(dryp, musp, silp, ichp, papp, chip, ncol=2, nrow=3, legend="none")
-annotate_figure(allreps_tsl,
-                left = text_grob("95% CI width of slope", rot = 90),
-                bottom = text_grob("Time-series length (years)"))
-
-allplants_tsl=ggarrange(dryp, casp, silp, salp, papp, saxp, ncol=2, nrow=3, legend="none")
-annotate_figure(allplants_tsl,
-                left = text_grob("95% CI width of slope", rot = 90),
-                bottom = text_grob("Time-series length (years)"))
-
-allarths1_tsl=ggarrange(musp, ichp, chip, acap, cocp, colp,ncol=2, nrow=3, legend="none")
-annotate_figure(allarths1_tsl,
-                left = text_grob("95% CI width of slope", rot = 90),
-                bottom = text_grob("Time-series length (years)"))
-
-allarths2_tsl=ggarrange(linp, lycp, nymp, phop, scip, ncol=2, nrow=3, legend="none")
-annotate_figure(allarths2_tsl,
-                left = text_grob("95% CI width of slope", rot = 90),
-                bottom = text_grob("Time-series length (years)"))
+      taxon = taxon_name,
+      .groups = "drop"
+    ) %>%
+    mutate(
+      trend_direction = case_when(
+        slope_mean < 0 ~ "Earlier",
+        slope_mean > 0 ~ "Later",
+        TRUE ~ "No change"
+      )
+    )
+})
+#
+# chironomidae_slope_df <- chi_betamu %>%
+#   group_by(start_yr, end_yr, tsl) %>%
+#   summarise(
+#     slope_median = median(beta_mu),
+#     slope_mean   = mean(beta_mu),
+#     slope_sd= sd(beta_mu),
+#     CI_width = quantile(beta_mu, 0.975) - quantile(beta_mu, 0.025),
+#     .groups = "drop")
+#
+# sciaridae_slope_df <- sci_betamu %>%
+#   group_by(start_yr, end_yr, tsl) %>%
+#   summarise(
+#     slope_median = median(beta_mu),
+#     slope_mean   = mean(beta_mu),
+#     slope_sd= sd(beta_mu),
+#     CI_width = quantile(beta_mu, 0.975) - quantile(beta_mu, 0.025),
+#     .groups = "drop")
+#
+# ichneumonidae_slope_df <- ich_betamu %>%
+#   group_by(start_yr, end_yr, tsl) %>%
+#   summarise(
+#     slope_median = median(beta_mu),
+#     slope_mean   = mean(beta_mu),
+#     slope_sd= sd(beta_mu),
+#     CI_width = quantile(beta_mu, 0.975) - quantile(beta_mu, 0.025),
+#     .groups = "drop")
+#
+# muscidae_slope_df <- mus_betamu %>%
+#   group_by(start_yr, end_yr, tsl) %>%
+#   summarise(
+#     slope_median = median(beta_mu),
+#     slope_mean   = mean(beta_mu),
+#     slope_sd= sd(beta_mu),
+#     CI_width = quantile(beta_mu, 0.975) - quantile(beta_mu, 0.025),
+#     .groups = "drop")
+#
+# dryas_slope_df <- dry_betamu %>%
+#   group_by(start_yr, end_yr, tsl) %>%
+#   summarise(
+#     slope_median = median(beta_mu),
+#     slope_mean   = mean(beta_mu),
+#     slope_sd= sd(beta_mu),
+#     CI_width = quantile(beta_mu, 0.975) - quantile(beta_mu, 0.025),
+#     .groups = "drop")
+#
+# salix_slope_df <- sal_betamu %>%
+#   group_by(start_yr, end_yr, tsl) %>%
+#   summarise(
+#     slope_median = median(beta_mu),
+#     slope_mean   = mean(beta_mu),
+#     slope_sd= sd(beta_mu),
+#     CI_width = quantile(beta_mu, 0.975) - quantile(beta_mu, 0.025),
+#     .groups = "drop")
+#
+# saxifraga_slope_df <- sax_betamu %>%
+#   group_by(start_yr, end_yr, tsl) %>%
+#   summarise(
+#     slope_median = median(beta_mu),
+#     slope_mean   = mean(beta_mu),
+#     slope_sd= sd(beta_mu),
+#     CI_width = quantile(beta_mu, 0.975) - quantile(beta_mu, 0.025),
+#     .groups = "drop")
+#
+# silene_slope_df <- sil_betamu %>%
+#   group_by(start_yr, end_yr, tsl) %>%
+#   summarise(
+#     slope_median = median(beta_mu),
+#     slope_mean   = mean(beta_mu),
+#     slope_sd= sd(beta_mu),
+#     CI_width = quantile(beta_mu, 0.975) - quantile(beta_mu, 0.025),
+#     .groups = "drop")
+#
+# cassiope_slope_df <- cas_betamu %>%
+#   group_by(start_yr, end_yr, tsl) %>%
+#   summarise(
+#     slope_median = median(beta_mu),
+#     slope_mean   = mean(beta_mu),
+#     slope_sd= sd(beta_mu),
+#     CI_width = quantile(beta_mu, 0.975) - quantile(beta_mu, 0.025),
+#     .groups = "drop")
+#
+# papaver_slope_df <- pap_betamu %>%
+#   group_by(start_yr, end_yr, tsl) %>%
+#   summarise(
+#     slope_median = median(beta_mu),
+#     slope_mean   = mean(beta_mu),
+#     slope_sd= sd(beta_mu),
+#     CI_width = quantile(beta_mu, 0.975) - quantile(beta_mu, 0.025),
+#     .groups = "drop")
+#
+# ichp=ggplot(ichneumonidae_slope_df,
+#             aes(x = tsl, y = start_yr)) +
+#   geom_point(aes(size = 1/CI_width,fill = slope_mean),
+#              shape = 21, color = "black",alpha = 0.7) +
+#   scale_size_continuous(name = "Trend certainty\n(1 / CI width)",range = c(1, 6)) +
+#   scale_fill_gradient2(low = "blue", mid = "white", high = "red",midpoint = 0,
+#                        name = "Trend (slope)") +
+#   theme_classic() +
+#   labs(x = NULL,y =NULL,
+#        title = "Ichneumonidae")+
+#   #     subtitle="Trend uncertainty across different time windows") +
+#   theme(axis.text.x = element_text(hjust = 1),
+#         plot.title = element_text(face = "bold"))
+#
+# scip=ggplot(sciaridae_slope_df,
+#             aes(x = tsl, y = start_yr)) +
+#   geom_point(aes(size = 1/CI_width,fill = slope_mean),
+#              shape = 21, color = "black",alpha = 0.7) +
+#   scale_size_continuous(name = "Trend certainty\n(1 / CI width)",range = c(1, 6)) +
+#   scale_fill_gradient2(low = "blue", mid = "white", high = "red",midpoint = 0,
+#                        name = "Trend (slope)") +
+#   theme_classic() +
+#   labs(x = NULL,y =NULL,
+#        title = "Sciaridae")+
+#   #     subtitle="Trend uncertainty across different time windows") +
+#   theme(axis.text.x = element_text(hjust = 1),
+#         plot.title = element_text(face = "bold"))
+# phoridae_slope_df <- pho_betamu %>%
+#   group_by(start_yr, end_yr, tsl) %>%
+#   summarise(
+#     slope_median = median(beta_mu),
+#     slope_mean   = mean(beta_mu),
+#     slope_sd= sd(beta_mu),
+#     CI_width = quantile(beta_mu, 0.975) - quantile(beta_mu, 0.025),
+#     .groups = "drop")
+#
+# phop=ggplot(phoridae_slope_df,
+#             aes(x = tsl, y = start_yr)) +
+#   geom_point(aes(size = 1/CI_width,fill = slope_mean),
+#              shape = 21, color = "black",alpha = 0.7) +
+#   scale_size_continuous(name = "Trend certainty\n(1 / CI width)",range = c(1, 6)) +
+#   scale_fill_gradient2(low = "blue", mid = "white", high = "red",midpoint = 0,
+#                        name = "Trend (slope)") +
+#   theme_classic() +
+#   labs(x = NULL,y =NULL,
+#        title = "Phoridae")+
+#   #     subtitle="Trend uncertainty across different time windows") +
+#   theme(axis.text.x = element_text(hjust = 1),
+#         plot.title = element_text(face = "bold"))
+#
+# nymphalidae_slope_df <- nym_betamu %>%
+#   group_by(start_yr, end_yr, tsl) %>%
+#   summarise(
+#     slope_median = median(beta_mu),
+#     slope_mean   = mean(beta_mu),
+#     slope_sd= sd(beta_mu),
+#     CI_width = quantile(beta_mu, 0.975) - quantile(beta_mu, 0.025),
+#     .groups = "drop")
+#
+# nymp=ggplot(nymphalidae_slope_df,
+#             aes(x = tsl, y = start_yr)) +
+#   geom_point(aes(size = 1/CI_width,fill = slope_mean),
+#              shape = 21, color = "black",alpha = 0.7) +
+#   scale_size_continuous(name = "Trend certainty\n(1 / CI width)",range = c(1, 6)) +
+#   scale_fill_gradient2(low = "blue", mid = "white", high = "red",midpoint = 0,
+#                        name = "Trend (slope)") +
+#   theme_classic() +
+#   labs(x = NULL,y =NULL,
+#        title = "Nymphalidae")+
+#   #     subtitle="Trend uncertainty across different time windows") +
+#   theme(axis.text.x = element_text(hjust = 1),
+#         plot.title = element_text(face = "bold"))
+#
+# lycosidae_slope_df <- lyc_betamu %>%
+#   group_by(start_yr, end_yr, tsl) %>%
+#   summarise(
+#     slope_median = median(beta_mu),
+#     slope_mean   = mean(beta_mu),
+#     slope_sd= sd(beta_mu),
+#     CI_width = quantile(beta_mu, 0.975) - quantile(beta_mu, 0.025),
+#     .groups = "drop")
+#
+# lycp=ggplot(lycosidae_slope_df,
+#             aes(x = tsl, y = start_yr)) +
+#   geom_point(aes(size = 1/CI_width,fill = slope_mean),
+#              shape = 21, color = "black",alpha = 0.7) +
+#   scale_size_continuous(name = "Trend certainty\n(1 / CI width)",range = c(1, 6)) +
+#   scale_fill_gradient2(low = "blue", mid = "white", high = "red",midpoint = 0,
+#                        name = "Trend (slope)") +
+#   theme_classic() +
+#   labs(x = NULL,y =NULL,
+#        title = "Lycosidae")+
+#   #     subtitle="Trend uncertainty across different time windows") +
+#   theme(axis.text.x = element_text(hjust = 1),
+#         plot.title = element_text(face = "bold"))
+#
+# linyphiidae_slope_df <- lin_betamu %>%
+#   group_by(start_yr, end_yr, tsl) %>%
+#   summarise(
+#     slope_median = median(beta_mu),
+#     slope_mean   = mean(beta_mu),
+#     slope_sd= sd(beta_mu),
+#     CI_width = quantile(beta_mu, 0.975) - quantile(beta_mu, 0.025),
+#     .groups = "drop")
+#
+# linp=ggplot(linyphiidae_slope_df,
+#             aes(x = tsl, y = start_yr)) +
+#   geom_point(aes(size = 1/CI_width,fill = slope_mean),
+#              shape = 21, color = "black",alpha = 0.7) +
+#   scale_size_continuous(name = "Trend certainty\n(1 / CI width)",range = c(1, 6)) +
+#   scale_fill_gradient2(low = "blue", mid = "white", high = "red",midpoint = 0,
+#                        name = "Trend (slope)") +
+#   theme_classic() +
+#   labs(x = NULL,y =NULL,
+#        title = "Linyphiidae")+
+#   #     subtitle="Trend uncertainty across different time windows") +
+#   theme(axis.text.x = element_text(hjust = 1),
+#         plot.title = element_text(face = "bold"))
+#
+# collembola_slope_df <- col_betamu %>%
+#   group_by(start_yr, end_yr, tsl) %>%
+#   summarise(
+#     slope_median = median(beta_mu),
+#     slope_mean   = mean(beta_mu),
+#     slope_sd= sd(beta_mu),
+#     CI_width = quantile(beta_mu, 0.975) - quantile(beta_mu, 0.025),
+#     .groups = "drop")
+#
+# colp=ggplot(collembola_slope_df,
+#             aes(x = tsl, y = start_yr)) +
+#   geom_point(aes(size = 1/CI_width,fill = slope_mean),
+#              shape = 21, color = "black",alpha = 0.7) +
+#   scale_size_continuous(name = "Trend certainty\n(1 / CI width)",range = c(1, 6)) +
+#   scale_fill_gradient2(low = "blue", mid = "white", high = "red",midpoint = 0,
+#                        name = "Trend (slope)") +
+#   theme_classic() +
+#   labs(x = NULL,y =NULL,
+#        title = "Collembola")+
+#   #     subtitle="Trend uncertainty across different time windows") +
+#   theme(axis.text.x = element_text(hjust = 1),
+#         plot.title = element_text(face = "bold"))
+#
+# coccoidea_slope_df <- coc_betamu %>%
+#   group_by(start_yr, end_yr, tsl) %>%
+#   summarise(
+#     slope_median = median(beta_mu),
+#     slope_mean   = mean(beta_mu),
+#     slope_sd= sd(beta_mu),
+#     CI_width = quantile(beta_mu, 0.975) - quantile(beta_mu, 0.025),
+#     .groups = "drop")
+#
+# cocp=ggplot(coccoidea_slope_df,
+#             aes(x = tsl, y = start_yr)) +
+#   geom_point(aes(size = 1/CI_width,fill = slope_mean),
+#              shape = 21, color = "black",alpha = 0.7) +
+#   scale_size_continuous(name = "Trend certainty\n(1 / CI width)",range = c(1, 6)) +
+#   scale_fill_gradient2(low = "blue", mid = "white", high = "red",midpoint = 0,
+#                        name = "Trend (slope)") +
+#   theme_classic() +
+#   labs(x = NULL,y =NULL,
+#        title = "Coccoidea")+
+#   #     subtitle="Trend uncertainty across different time windows") +
+#   theme(axis.text.x = element_text(hjust = 1),
+#         plot.title = element_text(face = "bold"))
+#
+# acari_slope_df <- aca_betamu %>%
+#   group_by(start_yr, end_yr, tsl) %>%
+#   summarise(
+#     slope_median = median(beta_mu),
+#     slope_mean   = mean(beta_mu),
+#     slope_sd= sd(beta_mu),
+#     CI_width = quantile(beta_mu, 0.975) - quantile(beta_mu, 0.025),
+#     .groups = "drop")
+#
+# acap=ggplot(acari_slope_df,
+#             aes(x = tsl, y = start_yr)) +
+#   geom_point(aes(size = 1/CI_width,fill = slope_mean),
+#              shape = 21, color = "black",alpha = 0.7) +
+#   scale_size_continuous(name = "Trend certainty\n(1 / CI width)",range = c(1, 6)) +
+#   scale_fill_gradient2(low = "blue", mid = "white", high = "red",midpoint = 0,
+#                        name = "Trend (slope)") +
+#   theme_classic() +
+#   labs(x = NULL,y =NULL,
+#        title = "Acari")+
+#   #     subtitle="Trend uncertainty across different time windows") +
+#   theme(axis.text.x = element_text(hjust = 1),
+#         plot.title = element_text(face = "bold"))
+#
+# musp=ggplot(muscidae_slope_df,
+#             aes(x = tsl, y = start_yr)) +
+#   geom_point(aes(size = 1/CI_width,fill = slope_mean),
+#              shape = 21, color = "black",alpha = 0.7) +
+#   scale_size_continuous(name = "Trend certainty\n(1 / CI width)",range = c(1, 6)) +
+#   scale_fill_gradient2(low = "blue", mid = "white", high = "red",midpoint = 0,
+#                        name = "Trend (slope)") +
+#   theme_classic() +
+#   labs(x = NULL,y =NULL,
+#        title = "Muscidae")+
+#   #     subtitle="Trend uncertainty across different time windows") +
+#   theme(axis.text.x = element_text(hjust = 1),
+#         plot.title = element_text(face = "bold"))
+#
+# chip=ggplot(chironomidae_slope_df,
+#             aes(x = tsl, y = start_yr)) +
+#   geom_point(aes(size = 1/CI_width,fill = slope_mean),
+#              shape = 21, color = "black",alpha = 0.7) +
+#   scale_size_continuous(name = "Trend certainty\n(1 / CI width)",range = c(1, 6)) +
+#   scale_fill_gradient2(low = "blue", mid = "white", high = "red",midpoint = 0,
+#                        name = "Trend (slope)") +
+#   theme_classic() +
+#   labs(x = NULL,y =NULL,
+#        title = "Chironomidae")+
+#   #     subtitle="Trend uncertainty across different time windows") +
+#   theme(axis.text.x = element_text(hjust = 1),
+#         plot.title = element_text(face = "bold"))
+#
+# dryp=ggplot(dryas_slope_df,
+#             aes(x = tsl, y = start_yr)) +
+#   geom_point(aes(size = 1/CI_width,fill = slope_mean),
+#              shape = 21, color = "black",alpha = 0.7) +
+#   scale_size_continuous(name = "Trend certainty\n(1 / CI width)",range = c(1, 6)) +
+#   scale_fill_gradient2(low = "blue", mid = "white", high = "red",midpoint = 0,
+#                        name = "Trend (slope)") +
+#   theme_classic() +
+#   labs(x = NULL,y =NULL,
+#        title = "Dryas")+
+#   #     subtitle="Trend uncertainty across different time windows") +
+#   theme(axis.text.x = element_text(hjust = 1),
+#         plot.title = element_text(face = "bold"))
+#
+# saxp=ggplot(saxifraga_slope_df,
+#             aes(x = tsl, y = start_yr)) +
+#   geom_point(aes(size = 1/CI_width,fill = slope_mean),
+#              shape = 21, color = "black",alpha = 0.7) +
+#   scale_size_continuous(name = "Trend certainty\n(1 / CI width)",range = c(1, 6)) +
+#   scale_fill_gradient2(low = "blue", mid = "white", high = "red",midpoint = 0,
+#                        name = "Trend (slope)") +
+#   theme_classic() +
+#   labs(x = NULL,y =NULL,
+#        title = "Saxifraga")+
+#   #     subtitle="Trend uncertainty across different time windows") +
+#   theme(axis.text.x = element_text(hjust = 1),
+#         plot.title = element_text(face = "bold"))
+#
+# silp=ggplot(silene_slope_df,
+#             aes(x = tsl, y = start_yr)) +
+#   geom_point(aes(size = 1/CI_width,fill = slope_mean),
+#              shape = 21, color = "black",alpha = 0.7) +
+#   scale_size_continuous(name = "Trend certainty\n(1 / CI width)",range = c(1, 6)) +
+#   scale_fill_gradient2(low = "blue", mid = "white", high = "red",midpoint = 0,
+#                        name = "Trend (slope)") +
+#   theme_classic() +
+#   labs(x = NULL,y =NULL,
+#        title = "Silene")+
+#   #     subtitle="Trend uncertainty across different time windows") +
+#   theme(axis.text.x = element_text(hjust = 1),
+#         plot.title = element_text(face = "bold"))
+#
+# salp=ggplot(salix_slope_df,
+#             aes(x = tsl, y = start_yr)) +
+#   geom_point(aes(size = 1/CI_width,fill = slope_mean),
+#              shape = 21, color = "black",alpha = 0.7) +
+#   scale_size_continuous(name = "Trend certainty\n(1 / CI width)",range = c(1, 6)) +
+#   scale_fill_gradient2(low = "blue", mid = "white", high = "red",midpoint = 0,
+#                        name = "Trend (slope)") +
+#   theme_classic() +
+#   labs(x = NULL,y =NULL,
+#        title = "Salix")+
+#   #     subtitle="Trend uncertainty across different time windows") +
+#   theme(axis.text.x = element_text(hjust = 1),
+#         plot.title = element_text(face = "bold"))
+#
+# papp=ggplot(papaver_slope_df,
+#             aes(x = tsl, y = start_yr)) +
+#   geom_point(aes(size = 1/CI_width,fill = slope_mean),
+#              shape = 21, color = "black",alpha = 0.7) +
+#   scale_size_continuous(name = "Trend certainty\n(1 / CI width)",range = c(1, 6)) +
+#   scale_fill_gradient2(low = "blue", mid = "white", high = "red",midpoint = 0,
+#                        name = "Trend (slope)") +
+#   theme_classic() +
+#   labs(x = NULL,y =NULL,
+#        title = "Papaver")+
+#   #     subtitle="Trend uncertainty across different time windows") +
+#   theme(axis.text.x = element_text(hjust = 1),
+#         plot.title = element_text(face = "bold"))
+#
+# casp=ggplot(cassiope_slope_df,
+#             aes(x = tsl, y = start_yr)) +
+#   geom_point(aes(size = 1/CI_width,fill = slope_mean),
+#              shape = 21, color = "black",alpha = 0.7) +
+#   scale_size_continuous(name = "Trend certainty\n(1 / CI width)",range = c(1, 6)) +
+#   scale_fill_gradient2(low = "blue", mid = "white", high = "red",midpoint = 0,
+#                        name = "Trend (slope)") +
+#   theme_classic() +
+#   labs(x = NULL,y =NULL,
+#        title = "Cassiope")+
+#   #     subtitle="Trend uncertainty across different time windows") +
+#   theme(axis.text.x = element_text(hjust = 1),
+#         plot.title = element_text(face = "bold"))
+#
+# allreps_tsl=ggarrange(dryp, musp, silp, ichp, papp, chip, ncol=2, nrow=3, legend="none")
+# annotate_figure(allreps_tsl,
+#                 left = text_grob("95% CI width of slope", rot = 90),
+#                 bottom = text_grob("Time-series length (years)"))
+#
+# allplants_tsl=ggarrange(dryp, casp, silp, salp, papp, saxp, ncol=2, nrow=3, legend="none")
+# annotate_figure(allplants_tsl,
+#                 left = text_grob("95% CI width of slope", rot = 90),
+#                 bottom = text_grob("Time-series length (years)"))
+#
+# allarths1_tsl=ggarrange(musp, ichp, chip, acap, cocp, colp,ncol=2, nrow=3, legend="none")
+# annotate_figure(allarths1_tsl,
+#                 left = text_grob("95% CI width of slope", rot = 90),
+#                 bottom = text_grob("Time-series length (years)"))
+#
+# allarths2_tsl=ggarrange(linp, lycp, nymp, phop, scip, ncol=2, nrow=3, legend="none")
+# annotate_figure(allarths2_tsl,
+#                 left = text_grob("95% CI width of slope", rot = 90),
+#                 bottom = text_grob("Time-series length (years)"))
