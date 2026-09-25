@@ -25,7 +25,7 @@ airtemp_raw_dat[airtemp_raw_dat==-9999]=NA
 snow_ave=snow_raw_dat%>%
   group_by(Year)%>%
   summarise(Jun10_cover=mean(PercentSnowCover))%>%
-  filter(!Year<1996)
+  filter(!Year<1996)%>%rename(year=Year)
 
 #air temp####
 airtemp_dat_daily= airtemp_raw_dat %>%
@@ -64,3 +64,8 @@ airtemp_dat_summer=airtemp_raw_dat%>%mutate(year = year(Date),
   unique()
 
 airtemp_dat_apr_jul=full_join(airtemp_dat_spring,airtemp_dat_summer)
+
+year_center=mean(airtemp_dat_apr_jul$year)
+
+airtemp_dat_apr_jul=airtemp_dat_apr_jul%>%
+  mutate(year_c=year-year_center)
